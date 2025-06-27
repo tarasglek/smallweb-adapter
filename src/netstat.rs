@@ -1,4 +1,4 @@
-use std::env;
+use crate::debug_log;
 use std::process::Command;
 
 pub fn is_port_listening(port: u16) -> bool {
