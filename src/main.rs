@@ -1,4 +1,5 @@
 use std::env;
+use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::thread;
@@ -143,7 +144,8 @@ fn main() {
                 command.arg("sh");
             }
             command.env("PORT", deno_args.port.to_string());
-            command.arg("-c").arg(config.exec);
+            fs::write("cmd.sh", &config.exec).expect("Unable to write to cmd.sh");
+            command.arg("cmd.sh");
             debug_log!("Spawning command: {:?}", &command);
             spawn_and_wait_for_port(&mut command, deno_args.port);
         }
