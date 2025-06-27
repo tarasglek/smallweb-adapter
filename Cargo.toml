@@ -1,5 +1,5 @@
 [package]
-name = "deno"
+name = "smallweb-adapter"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,7 @@ serde_json = "1.0.140"
 
 [dev-dependencies]
 tempfile = "3.10.1"
+
+[[bin]]
+name = "deno"
+path = "src/main.rs"
