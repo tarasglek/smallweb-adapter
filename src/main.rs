@@ -48,11 +48,11 @@ mod tests {
         ];
 
         let path_var = "/usr/bin:/bin";
-        let display_json_arg = r#"{"command":"fetch","entrypoint":"main.tsx","port":38025}"#;
-        let args_str = format!("deno run --allow-net '{}'", display_json_arg);
+        let dir = file_path.parent().unwrap().to_str().unwrap();
+        let args_str = format!("deno run --allow-net '{}'", json_arg);
         println!(
-            "Equivalent command for test_invoke_adapter:\nPATH=\"{}\" {}",
-            path_var, args_str
+            "Equivalent command for test_invoke_adapter:\ncd {} && {}",
+            dir, args_str
         );
 
         let action = decide_action(&args, path_var);
@@ -81,13 +81,12 @@ mod tests {
         ];
 
         let original_path = "/path/to/adapter:/usr/bin:/bin";
-
-        let display_json_arg = r#"{"command":"fetch","entrypoint":"main.tsx","port":38025}"#;
-        let args_str = format!("{} run --allow-net '{}'", args[0], display_json_arg);
+        let dir = file_path.parent().unwrap().to_str().unwrap();
+        let args_str = format!("{} run --allow-net '{}'", args[0], json_arg);
 
         println!(
-            "Equivalent command for test_normal_deno:\nPATH=\"{}\" {}",
-            original_path, args_str
+            "Equivalent command for test_normal_deno:\ncd {} && {}",
+            dir, args_str
         );
 
         let action = decide_action(&args, original_path);
