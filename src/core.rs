@@ -39,9 +39,16 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
     let create_new_path = || {
         if should_change_path {
             let mut paths: Vec<_> = env::split_paths(path_var).collect();
-            if !paths.is_empty() {
-                paths.remove(0);
-            }
+            let mut found = false;
+            paths.retain(|p| {
+                if !found && p.join("deno").exists() {
+                    debug_log!("removing path entry: {:?}", p);
+                    found = true;
+                    false // remove this path
+                } else {
+                    true // keep this path
+                }
+            });
             let new_path = env::join_paths(paths).unwrap();
             debug_log!("new PATH: {:?}", new_path);
             Some(new_path)

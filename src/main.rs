@@ -36,6 +36,7 @@ fn main() {
 mod tests {
     use crate::core::{decide_action, Action, DenoArgs};
     use std::env;
+    use tempfile::tempdir;
 
     #[test]
     fn test_invoke_adapter() {
@@ -93,20 +94,18 @@ mod tests {
             json_arg.clone(),
         ];
 
-        let original_path = "/path/to/adapter:/usr/bin:/bin";
-        let dir = file_path.parent().unwrap().to_str().unwrap();
-        let args_str = format!("{} run --allow-net '{}'", args[0], json_arg);
+        let temp_dir = tempdir().unwrap();
+        let deno_dir = temp_dir.path();
+        std::fs::File::create(deno_dir.join("deno")).unwrap();
 
-        println!(
-            "Equivalent command for test_normal_deno:\ncd {} && {}",
-            dir, args_str
-        );
+        let original_path =
+            env::join_paths([deno_dir.as_os_str(), "/usr/bin".as_ref(), "/bin".as_ref()].iter())
+                .unwrap();
 
-        let action = decide_action(&args, original_path);
+        let action = decide_action(&args, original_path.to_str().unwrap());
 
-        let mut paths: Vec<_> = env::split_paths(original_path).collect();
-        paths.remove(0);
-        let expected_new_path = env::join_paths(paths).unwrap();
+        let expected_new_path =
+            env::join_paths(["/usr/bin".as_ref(), "/bin".as_ref()].iter()).unwrap();
 
         assert_eq!(
             action,
@@ -130,12 +129,18 @@ mod tests {
             json_arg.clone(),
         ];
 
-        let original_path = "/path/to/adapter:/usr/bin:/bin";
-        let action = decide_action(&args, original_path);
+        let temp_dir = tempdir().unwrap();
+        let deno_dir = temp_dir.path();
+        std::fs::File::create(deno_dir.join("deno")).unwrap();
 
-        let mut paths: Vec<_> = env::split_paths(original_path).collect();
-        paths.remove(0);
-        let expected_new_path = env::join_paths(paths).unwrap();
+        let original_path =
+            env::join_paths([deno_dir.as_os_str(), "/usr/bin".as_ref(), "/bin".as_ref()].iter())
+                .unwrap();
+
+        let action = decide_action(&args, original_path.to_str().unwrap());
+
+        let expected_new_path =
+            env::join_paths(["/usr/bin".as_ref(), "/bin".as_ref()].iter()).unwrap();
 
         assert_eq!(
             action,
