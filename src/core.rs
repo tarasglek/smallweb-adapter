@@ -3,26 +3,6 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 
-macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        if let Ok(debug_val) = env::var("DEBUG") {
-            if debug_val.contains('.') {
-                use std::fs::OpenOptions;
-                use std::io::Write;
-                if let Ok(mut file) = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&debug_val)
-                {
-                    let _ = writeln!(file, $($arg)*);
-                }
-            } else {
-                eprintln!($($arg)*);
-            }
-        }
-    };
-}
-
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[allow(dead_code)] // command is unused for now
 pub struct DenoArgs {

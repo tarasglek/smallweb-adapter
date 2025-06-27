@@ -4,29 +4,10 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
+mod logging;
 mod core;
 mod netstat;
 use crate::core::{decide_action, Action};
-
-macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        if let Ok(debug_val) = env::var("DEBUG") {
-            if debug_val.contains('.') {
-                use std::fs::OpenOptions;
-                use std::io::Write;
-                if let Ok(mut file) = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&debug_val)
-                {
-                    let _ = writeln!(file, $($arg)*);
-                }
-            } else {
-                eprintln!($($arg)*);
-            }
-        }
-    };
-}
 
 fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let mut child = match command.spawn() {

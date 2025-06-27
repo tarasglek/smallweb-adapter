@@ -1,26 +1,6 @@
 use std::env;
 use std::process::Command;
 
-macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        if let Ok(debug_val) = env::var("DEBUG") {
-            if debug_val.contains('.') {
-                use std::fs::OpenOptions;
-                use std::io::Write;
-                if let Ok(mut file) = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&debug_val)
-                {
-                    let _ = writeln!(file, $($arg)*);
-                }
-            } else {
-                eprintln!($($arg)*);
-            }
-        }
-    };
-}
-
 pub fn is_port_listening(port: u16) -> bool {
     debug_log!("[netstat] checking for port {}", port);
     let output = match Command::new("netstat").arg("-tln").output() {
