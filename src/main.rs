@@ -1,9 +1,51 @@
 use std::env;
-use std::os::unix::process::CommandExt;
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 mod core;
+mod netstat;
 use crate::core::{decide_action, Action};
+
+fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
+    let mut child = match command.spawn() {
+        Ok(child) => child,
+        Err(e) => {
+            eprintln!("Failed to spawn child process: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let timeout = Duration::from_secs(10);
+    let start = std::time::Instant::now();
+
+    loop {
+        if netstat::is_port_listening(port) {
+            eprintln!("READY");
+            break;
+        }
+
+        if start.elapsed() > timeout {
+            eprintln!(
+                "Timeout: process did not start listening on port {} within {} seconds.",
+                port,
+                timeout.as_secs()
+            );
+            child.kill().ok(); // Try to kill the child process
+            break;
+        }
+
+        thread::sleep(Duration::from_secs(1));
+    }
+
+    let status = child.wait().expect("Failed to wait on child process");
+    if let Some(code) = status.code() {
+        std::process::exit(code);
+    } else {
+        // Process terminated by signal
+        std::process::exit(1);
+    }
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -11,13 +53,10 @@ fn main() {
 
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
-            let port_str = deno_args.port.to_string();
             let mut command = Command::new("sh");
-            command.env("PORT", port_str);
+            command.env("PORT", deno_args.port.to_string());
             command.arg("-c").arg(config.exec);
-            let err = command.exec();
-            eprintln!("Failed to exec sh: {}", err);
-            std::process::exit(1);
+            spawn_and_wait_for_port(&mut command, deno_args.port);
         }
         Action::ExecDeno { new_path } => {
             let mut command = Command::new("deno");
@@ -25,9 +64,14 @@ fn main() {
             if let Some(p) = new_path {
                 command.env("PATH", p);
             }
-            let err = command.exec();
-            eprintln!("Failed to exec deno: {}", err);
-            std::process::exit(1);
+
+            let last_arg = args
+                .last()
+                .expect("Expected at least one argument for Deno execution");
+            let deno_args: core::DenoArgs = serde_json::from_str(last_arg)
+                .expect("Failed to parse DenoArgs from last argument");
+
+            spawn_and_wait_for_port(&mut command, deno_args.port);
         }
     }
 }
