@@ -1,6 +1,8 @@
 smallweb launches deno like:
 
-/usr/local/bin/deno run --allow-net --allow-import --allow-env --allow-sys --allow-ffi --unstable-kv --unstable-otel --unstable-temporal --node-modules-dir=none --no-prompt --quiet --allow-read=/home/taras/smallweb/post,/usr/local/bin/deno,/home/taras/.cache/deno/npm/registry.npmjs.org --allow-write=/home/taras/smallweb/post/data - {"command":"fetch","entrypoint":"file:///home/taras/smallweb/post/main.ts","port":38025}\n
+```sh
+/usr/local/bin/deno run --allow-net --allow-import --allow-env --allow-sys --allow-ffi --unstable-kv --unstable-otel --unstable-temporal --node-modules-dir=none --no-prompt --quiet --allow-read=/home/taras/smallweb/post,/usr/local/bin/deno,/home/taras/.cache/deno/npm/registry.npmjs.org --allow-write=/home/taras/smallweb/post/data - '{"command":"fetch","entrypoint":"file:///home/taras/smallweb/post/main.ts","port":38025}'
+```
 
 Our rust smallweb-adapter will also be named deno and be first in path:
 - Parse the json in last arg
