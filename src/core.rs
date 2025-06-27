@@ -3,6 +3,14 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 
+macro_rules! debug_log {
+    ($($arg:tt)*) => {
+        if env::var("DEBUG").is_ok() {
+            eprintln!($($arg)*);
+        }
+    };
+}
+
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[allow(dead_code)] // command is unused for now
 pub struct DenoArgs {
@@ -23,7 +31,9 @@ pub enum Action {
 }
 
 pub fn decide_action(args: &[String], path_var: &str) -> Action {
+    debug_log!("decide_action called with args: {:?}", args);
     let should_change_path = args.get(0).map_or(false, |a| a.ends_with("deno"));
+    debug_log!("should_change_path: {}", should_change_path);
 
     let create_new_path = || {
         if should_change_path {
@@ -44,38 +54,52 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
     let last_arg = if let Some(arg) = args.last() {
         arg
     } else {
+        debug_log!("No last arg, falling back.");
         return fallback();
     };
+    debug_log!("last_arg: {}", last_arg);
 
     let deno_args = if let Ok(args) = serde_json::from_str::<DenoArgs>(last_arg) {
         args
     } else {
+        debug_log!("Failed to parse last_arg as DenoArgs, falling back.");
         return fallback();
     };
+    debug_log!("deno_args: {:?}", deno_args);
 
     let path_str = if let Some(p) = deno_args.entrypoint.strip_prefix("file://") {
         p
     } else {
+        debug_log!("entrypoint doesn't start with file://, falling back.");
         return fallback();
     };
+    debug_log!("path_str: {}", path_str);
 
     if !path_str.ends_with("main.tsx") {
+        debug_log!("path_str doesn't end with main.tsx, falling back.");
         return fallback();
     }
 
     let file_content = if let Ok(content) = fs::read_to_string(path_str) {
         content
     } else {
+        debug_log!("Failed to read file content from path_str, falling back.");
         return fallback();
     };
+    debug_log!("file_content: {}", file_content);
 
     if !file_content.starts_with('{') {
+        debug_log!("file_content doesn't start with '{{', falling back.");
         return fallback();
     }
 
     if let Ok(config) = serde_json::from_str::<MainTsxConfig>(&file_content) {
+        debug_log!(
+            "Successfully parsed file_content as MainTsxConfig, returning Action::Exec."
+        );
         Action::Exec(config, deno_args)
     } else {
+        debug_log!("Failed to parse file_content as MainTsxConfig, falling back.");
         fallback()
     }
 }
