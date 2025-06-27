@@ -1,12 +1,13 @@
 use serde::Deserialize;
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)] // command and port are unused for now
-struct DenoArgs {
+pub struct DenoArgs {
     command: String,
     entrypoint: String,
     port: u16,
@@ -14,99 +15,160 @@ struct DenoArgs {
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)] // Fields are not used, we only care about parsing success.
-struct MainTsxConfig {
+pub struct MainTsxConfig {
     watchpattern: String,
     exec: String,
     build: Option<String>,
 }
 
-fn launch_deno() {
-    let args: Vec<String> = env::args().collect();
-    let mut command = Command::new("deno");
-    command.args(&args[1..]);
+#[derive(Debug, PartialEq)]
+pub enum Action {
+    Print(String),
+    ExecDeno { new_path: Option<OsString> },
+}
 
-    if let Some(arg0) = args.get(0) {
-        if arg0.ends_with("deno") {
-            let path_var = match env::var("PATH") {
-                Ok(val) => val,
-                Err(e) => {
-                    eprintln!("Could not get PATH environment variable: {}", e);
-                    std::process::exit(1);
-                }
-            };
+pub fn decide_action(args: &[String], path_var: &str) -> Action {
+    let should_change_path = args.get(0).map_or(false, |a| a.ends_with("deno"));
 
-            let mut paths: Vec<_> = env::split_paths(&path_var).collect();
+    let create_new_path = || {
+        if should_change_path {
+            let mut paths: Vec<_> = env::split_paths(path_var).collect();
             if !paths.is_empty() {
                 paths.remove(0);
             }
-
-            let new_path = match env::join_paths(paths) {
-                Ok(p) => p,
-                Err(e) => {
-                    eprintln!("Could not construct new PATH: {}", e);
-                    std::process::exit(1);
-                }
-            };
-            command.env("PATH", new_path);
-        }
-    }
-
-    let err = command.exec();
-    eprintln!("Failed to exec deno: {}", err);
-    std::process::exit(1);
-}
-
-fn main() {
-    let last_arg = match env::args().last() {
-        Some(arg) => arg,
-        None => {
-            // This case is unlikely as args[0] is the program name.
-            eprintln!("No command line arguments found.");
-            std::process::exit(1);
+            Some(env::join_paths(paths).unwrap())
+        } else {
+            None
         }
     };
 
-    match serde_json::from_str::<DenoArgs>(&last_arg) {
-        Ok(deno_args) => {
-            let path_str = if let Some(p) = deno_args.entrypoint.strip_prefix("file://") {
-                p
-            } else {
-                launch_deno();
-                return;
-            };
+    let fallback = || Action::ExecDeno {
+        new_path: create_new_path(),
+    };
 
-            if !path_str.ends_with("main.tsx") {
-                launch_deno();
-                return;
-            }
+    let last_arg = if let Some(arg) = args.last() {
+        arg
+    } else {
+        return fallback();
+    };
 
-            let file_content = match fs::read_to_string(path_str) {
-                Ok(content) => content,
-                Err(_) => {
-                    launch_deno();
-                    return;
-                }
-            };
+    let deno_args = if let Ok(args) = serde_json::from_str::<DenoArgs>(last_arg) {
+        args
+    } else {
+        return fallback();
+    };
 
-            if !file_content.starts_with('{') {
-                launch_deno();
-                return;
-            }
+    let path_str = if let Some(p) = deno_args.entrypoint.strip_prefix("file://") {
+        p
+    } else {
+        return fallback();
+    };
 
-            match serde_json::from_str::<MainTsxConfig>(&file_content) {
-                Ok(_config) => {
-                    // Per README, if parse succeeds, print the json.
-                    println!("{}", file_content);
-                }
-                Err(_) => {
-                    // Fails to parse as JSON
-                    launch_deno();
-                }
-            }
+    if !path_str.ends_with("main.tsx") {
+        return fallback();
+    }
+
+    let file_content = if let Ok(content) = fs::read_to_string(path_str) {
+        content
+    } else {
+        return fallback();
+    };
+
+    if !file_content.starts_with('{') {
+        return fallback();
+    }
+
+    if serde_json::from_str::<MainTsxConfig>(&file_content).is_ok() {
+        Action::Print(file_content)
+    } else {
+        fallback()
+    }
+}
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let path_var = env::var("PATH").unwrap_or_default();
+
+    match decide_action(&args, &path_var) {
+        Action::Print(config) => {
+            println!("{}", config);
         }
-        Err(_) => {
-            // Not a smallweb command, probably a user running deno directly.
-            launch_deno();
+        Action::ExecDeno { new_path } => {
+            let mut command = Command::new("deno");
+            command.args(&args[1..]);
+            if let Some(p) = new_path {
+                command.env("PATH", p);
+            }
+            let err = command.exec();
+            eprintln!("Failed to exec deno: {}", err);
+            std::process::exit(1);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use std::io::Write;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_invoke_adapter() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("main.tsx");
+        let mut file = File::create(&file_path).unwrap();
+        let config_content = r#"{"watchpattern": "src/**/*.rs", "exec": "cargo run"}"#;
+        writeln!(file, "{}", config_content).unwrap();
+
+        let entrypoint = format!("file://{}", file_path.to_str().unwrap());
+        let json_arg = format!(
+            r#"{{"command":"fetch","entrypoint":"{}","port":38025}}"#,
+            entrypoint
+        );
+        let args = vec![
+            "deno".to_string(),
+            "run".to_string(),
+            "--allow-net".to_string(),
+            json_arg,
+        ];
+
+        let action = decide_action(&args, "/usr/bin:/bin");
+        // read_to_string reads the newline from writeln!
+        assert_eq!(action, Action::Print(format!("{}\n", config_content)));
+    }
+
+    #[test]
+    fn test_normal_deno() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("main.tsx");
+        let mut file = File::create(&file_path).unwrap();
+        writeln!(file, "console.log('Hello, world!');").unwrap();
+
+        let entrypoint = format!("file://{}", file_path.to_str().unwrap());
+        let json_arg = format!(
+            r#"{{"command":"fetch","entrypoint":"{}","port":38025}}"#,
+            entrypoint
+        );
+        let args = vec![
+            "/path/to/adapter/deno".to_string(),
+            "run".to_string(),
+            "--allow-net".to_string(),
+            json_arg,
+        ];
+
+        let original_path = "/path/to/adapter:/usr/bin:/bin";
+        let action = decide_action(&args, original_path);
+
+        let mut paths: Vec<_> = env::split_paths(original_path).collect();
+        paths.remove(0);
+        let expected_new_path = env::join_paths(paths).unwrap();
+
+        assert_eq!(
+            action,
+            Action::ExecDeno {
+                new_path: Some(expected_new_path)
+            }
+        );
     }
 }
