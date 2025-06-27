@@ -44,7 +44,7 @@ mod tests {
             "deno".to_string(),
             "run".to_string(),
             "--allow-net".to_string(),
-            json_arg,
+            json_arg.clone(),
         ];
 
         let path_var = "/usr/bin:/bin";
@@ -77,7 +77,7 @@ mod tests {
             "/path/to/adapter/deno".to_string(),
             "run".to_string(),
             "--allow-net".to_string(),
-            json_arg,
+            json_arg.clone(),
         ];
 
         let original_path = "/path/to/adapter:/usr/bin:/bin";
