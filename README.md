@@ -14,6 +14,19 @@ Our rust smallweb-adapter will also be named deno and be first in path:
  * execute the command in `exec`, with `$PORT` available as an environment variable.
 
 
+# Security
+
+To enhance security, `smallweb-adapter` uses [bubblewrap](https://github.com/containers/bubblewrap) to create a sandboxed environment for executing Deno applications. The adapter translates Deno's permission flags into `bubblewrap` arguments to enforce restrictions at the OS level.
+
+Here's how the flags are mapped:
+
+- `--allow-net` is translated to `bwrap --share-net`.
+- `--allow-read=<path>` is translated to `bwrap --ro-bind <path> <path>`.
+- `--allow-write=<path>` is translated to `bwrap --bind <path> <path>`.
+
+If no `--allow-net` or `--allow-read`/`--allow-write` flags are provided, `bubblewrap` is not used, and the command is executed directly.
+
+
 # Debugging
 
 Set the `DEBUG` environment variable to enable logging.
