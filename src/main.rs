@@ -1,4 +1,5 @@
 use std::env;
+use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
@@ -51,14 +52,9 @@ fn main() {
             if let Some(p) = new_path {
                 command.env("PATH", p);
             }
-
-            let last_arg = args
-                .last()
-                .expect("Expected at least one argument for Deno execution");
-            let deno_args: core::DenoArgs = serde_json::from_str(last_arg)
-                .expect("Failed to parse DenoArgs from last argument");
-
-            spawn_and_wait_for_port(&mut command, deno_args.port);
+            let err = command.exec();
+            eprintln!("Failed to exec deno: {}", err);
+            std::process::exit(1);
         }
     }
 }
