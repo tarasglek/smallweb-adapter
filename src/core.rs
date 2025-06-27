@@ -13,9 +13,7 @@ pub struct DenoArgs {
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct MainTsxConfig {
-    pub watchpattern: Option<String>,
     pub exec: String,
-    pub build: Option<String>,
 }
 
 #[derive(Debug, PartialEq)]

@@ -10,8 +10,8 @@ Our rust smallweb-adapter will also be named deno and be first in path:
  * look at PATH..remove first element of it(using ; separator), set it as env var
  * exec deno  as last thing it does
 - if main.tsx does parse
- * schema of it is {watchpattern: string, exec:"bash cmd with $PORT", build?:"build cmd to run if watchpattern changes"}
- * print the json
+ * schema of it is {exec: "bash cmd with $PORT"}
+ * execute the command in `exec`, with `$PORT` available as an environment variable.
 
 
 # Tests

@@ -71,8 +71,6 @@ mod tests {
         match action {
             Action::Exec(config, deno_args) => {
                 assert!(config.exec.contains("$PORT"));
-                assert_eq!(config.watchpattern, None);
-                assert_eq!(config.build, None);
                 assert_eq!(deno_args, expected_deno_args);
             }
             _ => panic!("Expected Action::Exec, but got {:?}", action),
