@@ -10,7 +10,38 @@ mod netstat;
 use crate::core::{decide_action, Action};
 
 fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
-    let mut bwrap_args = Vec::new();
+    let has_allow_net = args.contains(&"--allow-net".to_string());
+    let has_allow_fs = args
+        .iter()
+        .any(|arg| arg.starts_with("--allow-read=") || arg.starts_with("--allow-write="));
+
+    if !has_allow_net && !has_allow_fs {
+        return Vec::new();
+    }
+
+    let mut bwrap_args = vec![
+        "--die-with-parent".to_string(),
+        "--unshare-pid".to_string(),
+        "--proc".to_string(),
+        "/proc".to_string(),
+        "--dev".to_string(),
+        "/dev".to_string(),
+    ];
+
+    if has_allow_net {
+        bwrap_args.push("--share-net".to_string());
+    }
+
+    // Bind essential system directories read-only
+    for dir in ["/bin", "/usr", "/lib", "/lib64", "/sbin", "/etc"] {
+        let path = std::path::Path::new(dir);
+        if path.exists() {
+            bwrap_args.push("--ro-bind".to_string());
+            bwrap_args.push(dir.to_string());
+            bwrap_args.push(dir.to_string());
+        }
+    }
+
     for arg in args {
         if let Some(paths) = arg.strip_prefix("--allow-read=") {
             for path in paths.split(',') {
@@ -30,6 +61,7 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
             }
         }
     }
+
     bwrap_args
 }
 
