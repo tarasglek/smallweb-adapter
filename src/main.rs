@@ -16,26 +16,13 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
         }
     };
 
-    let timeout = Duration::from_secs(10);
-    let start = std::time::Instant::now();
-
     loop {
         if netstat::is_port_listening(port) {
             eprintln!("READY");
             break;
         }
 
-        if start.elapsed() > timeout {
-            eprintln!(
-                "Timeout: process did not start listening on port {} within {} seconds.",
-                port,
-                timeout.as_secs()
-            );
-            child.kill().ok(); // Try to kill the child process
-            break;
-        }
-
-        thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_millis(100));
     }
 
     let status = child.wait().expect("Failed to wait on child process");
