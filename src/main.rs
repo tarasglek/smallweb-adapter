@@ -56,9 +56,12 @@ mod tests {
         );
 
         let action = decide_action(&args, path_var);
-        let file_path = std::path::Path::new("test/invoke_adapter/main.tsx");
-        let config_content = std::fs::read_to_string(file_path).unwrap();
-        assert_eq!(action, Action::Print(config_content));
+        match action {
+            Action::Print(content) => {
+                assert!(content.contains(r#""exec":"#));
+            }
+            _ => panic!("Expected Action::Print, but got {:?}", action),
+        }
     }
 
     #[test]

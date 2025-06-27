@@ -14,7 +14,7 @@ pub struct DenoArgs {
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)] // Fields are not used, we only care about parsing success.
 pub struct MainTsxConfig {
-    watchpattern: String,
+    watchpattern: Option<String>,
     exec: String,
     build: Option<String>,
 }
