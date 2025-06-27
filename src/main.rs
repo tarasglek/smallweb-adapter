@@ -34,7 +34,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{decide_action, Action, DenoArgs, MainTsxConfig};
+    use crate::core::{decide_action, Action, DenoArgs};
     use std::env;
 
     #[test]
