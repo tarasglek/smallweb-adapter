@@ -59,7 +59,19 @@ fn main() {
         .collect();
     debug_log!("{}", quoted_args.join(" "));
 
-    let path_var = env::var("PATH").unwrap_or_default();
+    let mut path_var = env::var("PATH").unwrap_or_default();
+    if path_var.is_empty() {
+        if let Ok(output) = Command::new("/bin/bash")
+            .arg("--login")
+            .arg("-c")
+            .arg("echo $PATH")
+            .output()
+        {
+            if output.status.success() {
+                path_var = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            }
+        }
+    }
 
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
