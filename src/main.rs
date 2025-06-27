@@ -8,6 +8,26 @@ mod core;
 mod netstat;
 use crate::core::{decide_action, Action};
 
+macro_rules! debug_log {
+    ($($arg:tt)*) => {
+        if let Ok(debug_val) = env::var("DEBUG") {
+            if debug_val.contains('.') {
+                use std::fs::OpenOptions;
+                use std::io::Write;
+                if let Ok(mut file) = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&debug_val)
+                {
+                    let _ = writeln!(file, $($arg)*);
+                }
+            } else {
+                eprintln!($($arg)*);
+            }
+        }
+    };
+}
+
 fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let mut child = match command.spawn() {
         Ok(child) => child,
@@ -37,6 +57,27 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+
+    let cwd = env::current_dir().map_or_else(|_| "unknown".to_string(), |p| p.display().to_string());
+    debug_log!("CWD: {}", cwd);
+
+    let quoted_args: Vec<String> = args
+        .iter()
+        .map(|arg| {
+            if arg.is_empty() {
+                "''".to_string()
+            } else if arg
+                .chars()
+                .all(|c| c.is_alphanumeric() || "/_.-".contains(c))
+            {
+                arg.clone()
+            } else {
+                format!("'{}'", arg.replace('\'', "'\\''"))
+            }
+        })
+        .collect();
+    debug_log!("{}", quoted_args.join(" "));
+
     let path_var = env::var("PATH").unwrap_or_default();
 
     match decide_action(&args, &path_var) {
