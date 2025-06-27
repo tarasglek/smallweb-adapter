@@ -21,31 +21,35 @@ struct MainTsxConfig {
 }
 
 fn launch_deno() {
-    let path_var = match env::var("PATH") {
-        Ok(val) => val,
-        Err(e) => {
-            eprintln!("Could not get PATH environment variable: {}", e);
-            std::process::exit(1);
-        }
-    };
-
-    let mut paths: Vec<_> = env::split_paths(&path_var).collect();
-    if !paths.is_empty() {
-        paths.remove(0);
-    }
-
-    let new_path = match env::join_paths(paths) {
-        Ok(p) => p,
-        Err(e) => {
-            eprintln!("Could not construct new PATH: {}", e);
-            std::process::exit(1);
-        }
-    };
-
     let args: Vec<String> = env::args().collect();
     let mut command = Command::new("deno");
     command.args(&args[1..]);
-    command.env("PATH", new_path);
+
+    if let Some(arg0) = args.get(0) {
+        if arg0.ends_with("deno") {
+            let path_var = match env::var("PATH") {
+                Ok(val) => val,
+                Err(e) => {
+                    eprintln!("Could not get PATH environment variable: {}", e);
+                    std::process::exit(1);
+                }
+            };
+
+            let mut paths: Vec<_> = env::split_paths(&path_var).collect();
+            if !paths.is_empty() {
+                paths.remove(0);
+            }
+
+            let new_path = match env::join_paths(paths) {
+                Ok(p) => p,
+                Err(e) => {
+                    eprintln!("Could not construct new PATH: {}", e);
+                    std::process::exit(1);
+                }
+            };
+            command.env("PATH", new_path);
+        }
+    }
 
     let err = command.exec();
     eprintln!("Failed to exec deno: {}", err);
