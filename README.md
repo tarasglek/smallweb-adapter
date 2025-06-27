@@ -22,7 +22,7 @@ Our rust smallweb-adapter will also be named deno and be first in path:
 
 # Security
 
-To enhance security, `smallweb-adapter` *always* uses [bubblewrap](https://github.com/containers/bubblewrap) to create a sandboxed environment for executing Deno applications. It starts with a restrictive baseline configuration and translates Deno's permission flags into additional `bubblewrap` arguments to selectively relax restrictions.
+To enhance security, `smallweb-adapter` *always* uses [bubblewrap](https://github.com/containers/bubblewrap) to create a sandboxed environment for executing non-Deno applications. It starts with a restrictive baseline configuration and translates Deno's permission flags into additional `bubblewrap` arguments to selectively relax restrictions.
 
 Here's how the flags are mapped:
 
