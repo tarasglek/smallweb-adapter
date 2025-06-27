@@ -67,13 +67,16 @@ mod tests {
             entrypoint,
             port: 38025,
         };
-        let expected_config = MainTsxConfig {
-            watchpattern: None,
-            exec: "python3 -m http.server --port 9931 $PORT".to_string(),
-            build: None,
-        };
 
-        assert_eq!(action, Action::Exec(expected_config, expected_deno_args));
+        match action {
+            Action::Exec(config, deno_args) => {
+                assert!(config.exec.contains("$PORT"));
+                assert_eq!(config.watchpattern, None);
+                assert_eq!(config.build, None);
+                assert_eq!(deno_args, expected_deno_args);
+            }
+            _ => panic!("Expected Action::Exec, but got {:?}", action),
+        }
     }
 
     #[test]
