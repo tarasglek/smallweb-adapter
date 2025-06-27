@@ -3,15 +3,21 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 mod core;
-use crate::core::{decide_action, Action};
+use crate::core::{decide_action, Action, DenoArgs, MainTsxConfig};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let path_var = env::var("PATH").unwrap_or_default();
 
     match decide_action(&args, &path_var) {
-        Action::Print(config) => {
-            println!("{}", config);
+        Action::Exec(config, deno_args) => {
+            let port_str = deno_args.port.to_string();
+            let exec_cmd = config.exec.replace("$PORT", &port_str);
+            let mut command = Command::new("sh");
+            command.arg("-c").arg(exec_cmd);
+            let err = command.exec();
+            eprintln!("Failed to exec sh: {}", err);
+            std::process::exit(1);
         }
         Action::ExecDeno { new_path } => {
             let mut command = Command::new("deno");
@@ -28,7 +34,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{decide_action, Action};
+    use crate::core::{decide_action, Action, DenoArgs, MainTsxConfig};
     use std::env;
 
     #[test]
@@ -56,12 +62,18 @@ mod tests {
         );
 
         let action = decide_action(&args, path_var);
-        match action {
-            Action::Print(content) => {
-                assert!(content.contains(r#""exec":"#));
-            }
-            _ => panic!("Expected Action::Print, but got {:?}", action),
-        }
+        let expected_deno_args = DenoArgs {
+            command: "fetch".to_string(),
+            entrypoint,
+            port: 38025,
+        };
+        let expected_config = MainTsxConfig {
+            watchpattern: None,
+            exec: "python3 -m http.server --port 9931 $PORT".to_string(),
+            build: None,
+        };
+
+        assert_eq!(action, Action::Exec(expected_config, expected_deno_args));
     }
 
     #[test]

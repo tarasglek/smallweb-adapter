@@ -3,25 +3,24 @@ use std::env;
 use std::ffi::OsString;
 use std::fs;
 
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)] // command and port are unused for now
+#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[allow(dead_code)] // command is unused for now
 pub struct DenoArgs {
-    command: String,
-    entrypoint: String,
-    port: u16,
+    pub command: String,
+    pub entrypoint: String,
+    pub port: u16,
 }
 
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)] // Fields are not used, we only care about parsing success.
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct MainTsxConfig {
-    watchpattern: Option<String>,
-    exec: String,
-    build: Option<String>,
+    pub watchpattern: Option<String>,
+    pub exec: String,
+    pub build: Option<String>,
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
-    Print(String),
+    Exec(MainTsxConfig, DenoArgs),
     ExecDeno { new_path: Option<OsString> },
 }
 
@@ -76,8 +75,8 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
         return fallback();
     }
 
-    if serde_json::from_str::<MainTsxConfig>(&file_content).is_ok() {
-        Action::Print(file_content)
+    if let Ok(config) = serde_json::from_str::<MainTsxConfig>(&file_content) {
+        Action::Exec(config, deno_args)
     } else {
         fallback()
     }
