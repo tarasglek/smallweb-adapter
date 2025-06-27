@@ -23,24 +23,21 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
     let mut bwrap_args = vec![
         "--die-with-parent".to_string(),
         "--unshare-pid".to_string(),
+        "--new-session".to_string(),
         "--proc".to_string(),
         "/proc".to_string(),
         "--dev".to_string(),
         "/dev".to_string(),
+        "--ro-bind".to_string(),
+        "/usr".to_string(),
+        "/usr".to_string(),
+        "--symlink".to_string(),
+        "usr/lib64".to_string(),
+        "/lib64".to_string(),
     ];
 
     if has_allow_net {
         bwrap_args.push("--share-net".to_string());
-    }
-
-    // Bind essential system directories read-only
-    for dir in ["/bin", "/usr", "/lib", "/lib64", "/sbin", "/etc"] {
-        let path = std::path::Path::new(dir);
-        if path.exists() {
-            bwrap_args.push("--ro-bind".to_string());
-            bwrap_args.push(dir.to_string());
-            bwrap_args.push(dir.to_string());
-        }
     }
 
     for arg in args {
