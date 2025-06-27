@@ -11,7 +11,7 @@ macro_rules! debug_log {
 
 pub fn is_port_listening(port: u16) -> bool {
     debug_log!("[netstat] checking for port {}", port);
-    let output = match Command::new("netstat").arg("-n").output() {
+    let output = match Command::new("netstat").arg("-tln").output() {
         Ok(output) => output,
         Err(e) => {
             debug_log!("[netstat] failed to run: {}", e);
@@ -24,7 +24,7 @@ pub fn is_port_listening(port: u16) -> bool {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     debug_log!("[netstat] stdout:\n{}", stdout);
-    let port_str = format!(":{}", port);
+    let port_str = format!(":{} ", port);
 
     // This is a simple check. It might produce false positives if the port number
     // appears elsewhere in the line. A more robust solution would parse the output.
