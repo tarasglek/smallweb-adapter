@@ -115,4 +115,33 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn test_jsr_entrypoint() {
+        let entrypoint = "jsr:@smallweb/file-server@0.8.2".to_string();
+        let json_arg = format!(
+            r#"{{"command":"fetch","entrypoint":"{}","port":42541}}"#,
+            entrypoint
+        );
+        let args = vec![
+            "/path/to/adapter/deno".to_string(),
+            "run".to_string(),
+            "-".to_string(),
+            json_arg.clone(),
+        ];
+
+        let original_path = "/path/to/adapter:/usr/bin:/bin";
+        let action = decide_action(&args, original_path);
+
+        let mut paths: Vec<_> = env::split_paths(original_path).collect();
+        paths.remove(0);
+        let expected_new_path = env::join_paths(paths).unwrap();
+
+        assert_eq!(
+            action,
+            Action::ExecDeno {
+                new_path: Some(expected_new_path)
+            }
+        );
+    }
 }
