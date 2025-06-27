@@ -98,7 +98,10 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
             fallback()
         }
     } else {
-        debug_log!("entrypoint doesn't start with file://, falling back.");
+        debug_log!(
+            "entrypoint {} doesn't start with file://, falling back.",
+            deno_args.entrypoint
+        );
         fallback()
     }
 }
