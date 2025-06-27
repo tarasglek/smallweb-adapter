@@ -12,13 +12,6 @@ use crate::core::{decide_action, Action};
 
 fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
     let has_allow_net = args.contains(&"--allow-net".to_string());
-    let has_allow_fs = args
-        .iter()
-        .any(|arg| arg.starts_with("--allow-read=") || arg.starts_with("--allow-write="));
-
-    if !has_allow_net && !has_allow_fs {
-        return Vec::new();
-    }
 
     let mut bwrap_args = vec![
         "--die-with-parent".to_string(),
@@ -130,16 +123,10 @@ fn main() {
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
             let bwrap_args = to_bubblewrap_args(&args);
-            let mut command;
-
-            if bwrap_args.is_empty() {
-                command = Command::new("sh");
-            } else {
-                command = Command::new("bwrap");
-                command.args(&bwrap_args);
-                command.arg("--");
-                command.arg("sh");
-            }
+            let mut command = Command::new("bwrap");
+            command.args(&bwrap_args);
+            command.arg("--");
+            command.arg("sh");
             command.env("PORT", deno_args.port.to_string());
             fs::write("cmd.sh", &config.exec).expect("Unable to write to cmd.sh");
             command.arg("cmd.sh");
