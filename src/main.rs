@@ -3,7 +3,7 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 mod core;
-use crate::core::{decide_action, Action, DenoArgs, MainTsxConfig};
+use crate::core::{decide_action, Action};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
