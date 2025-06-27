@@ -14,6 +14,16 @@ Our rust smallweb-adapter will also be named deno and be first in path:
  * execute the command in `exec`, with `$PORT` available as an environment variable.
 
 
+# Debugging
+
+Set the `DEBUG` environment variable to enable logging.
+
+- If `DEBUG` is set to any value (e.g., `DEBUG=1`), logs will be printed to stderr.
+- If `DEBUG` is set to a value containing a `.` (e.g., `DEBUG=debug.log`), it will be treated as a file path, and logs will be appended to that file.
+
+The debug logs will start with the current working directory and the command-line arguments quoted for easy shell reuse.
+
+
 # Tests
 
 ```
