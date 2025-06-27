@@ -12,9 +12,9 @@ fn main() {
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
             let port_str = deno_args.port.to_string();
-            let exec_cmd = config.exec.replace("$PORT", &port_str);
             let mut command = Command::new("sh");
-            command.arg("-c").arg(exec_cmd);
+            command.env("PORT", port_str);
+            command.arg("-c").arg(config.exec);
             let err = command.exec();
             eprintln!("Failed to exec sh: {}", err);
             std::process::exit(1);
