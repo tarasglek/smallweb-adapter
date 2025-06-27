@@ -9,6 +9,30 @@ mod core;
 mod netstat;
 use crate::core::{decide_action, Action};
 
+fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
+    let mut bwrap_args = Vec::new();
+    for arg in args {
+        if let Some(paths) = arg.strip_prefix("--allow-read=") {
+            for path in paths.split(',') {
+                if !path.is_empty() {
+                    bwrap_args.push("--ro-bind".to_string());
+                    bwrap_args.push(path.to_string());
+                    bwrap_args.push(path.to_string());
+                }
+            }
+        } else if let Some(paths) = arg.strip_prefix("--allow-write=") {
+            for path in paths.split(',') {
+                if !path.is_empty() {
+                    bwrap_args.push("--bind".to_string());
+                    bwrap_args.push(path.to_string());
+                    bwrap_args.push(path.to_string());
+                }
+            }
+        }
+    }
+    bwrap_args
+}
+
 fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let mut child = match command.spawn() {
         Ok(child) => child,
@@ -75,9 +99,20 @@ fn main() {
 
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
-            let mut command = Command::new("sh");
+            let bwrap_args = to_bubblewrap_args(&args);
+            let mut command;
+
+            if bwrap_args.is_empty() {
+                command = Command::new("sh");
+            } else {
+                command = Command::new("bwrap");
+                command.args(&bwrap_args);
+                command.arg("--");
+                command.arg("sh");
+            }
             command.env("PORT", deno_args.port.to_string());
             command.arg("-c").arg(config.exec);
+            debug_log!("Spawning command: {:?}", &command);
             spawn_and_wait_for_port(&mut command, deno_args.port);
         }
         Action::ExecDeno { new_path } => {
