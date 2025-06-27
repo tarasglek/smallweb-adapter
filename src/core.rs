@@ -32,6 +32,7 @@ pub enum Action {
 
 pub fn decide_action(args: &[String], path_var: &str) -> Action {
     debug_log!("decide_action called with args: {:?}", args);
+    debug_log!("original PATH: {}", path_var);
     let should_change_path = args.get(0).map_or(false, |a| a.ends_with("deno"));
     debug_log!("should_change_path: {}", should_change_path);
 
@@ -41,7 +42,9 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
             if !paths.is_empty() {
                 paths.remove(0);
             }
-            Some(env::join_paths(paths).unwrap())
+            let new_path = env::join_paths(paths).unwrap();
+            debug_log!("new PATH: {:?}", new_path);
+            Some(new_path)
         } else {
             None
         }
