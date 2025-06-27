@@ -13,3 +13,9 @@ Our rust smallweb-adapter will also be named deno and be first in path:
  * schema of it is {watchpattern: string, exec:"bash cmd with $PORT", build?:"build cmd to run if watchpattern changes"}
  * print the json
 
+
+# Tests
+
+```
+cargo test -- --nocapture
+```
