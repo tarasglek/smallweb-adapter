@@ -30,19 +30,12 @@ fn main() {
 mod tests {
     use crate::core::{decide_action, Action};
     use std::env;
-    use std::fs::File;
-    use std::io::Write;
-    use tempfile::tempdir;
 
     #[test]
     fn test_invoke_adapter() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("main.tsx");
-        let mut file = File::create(&file_path).unwrap();
-        let config_content = r#"{"watchpattern": "src/**/*.rs", "exec": "cargo run"}"#;
-        writeln!(file, "{}", config_content).unwrap();
-
-        let entrypoint = format!("file://{}", file_path.to_str().unwrap());
+        let file_path = std::path::Path::new("test/invoke_adapter/main.tsx");
+        let absolute_path = std::fs::canonicalize(file_path).unwrap();
+        let entrypoint = format!("file://{}", absolute_path.to_str().unwrap());
         let json_arg = format!(
             r#"{{"command":"fetch","entrypoint":"{}","port":38025}}"#,
             entrypoint
@@ -63,18 +56,16 @@ mod tests {
         );
 
         let action = decide_action(&args, path_var);
-        // read_to_string reads the newline from writeln!
-        assert_eq!(action, Action::Print(format!("{}\n", config_content)));
+        let file_path = std::path::Path::new("test/invoke_adapter/main.tsx");
+        let config_content = std::fs::read_to_string(file_path).unwrap();
+        assert_eq!(action, Action::Print(config_content));
     }
 
     #[test]
     fn test_normal_deno() {
-        let dir = tempdir().unwrap();
-        let file_path = dir.path().join("main.tsx");
-        let mut file = File::create(&file_path).unwrap();
-        writeln!(file, "console.log('Hello, world!');").unwrap();
-
-        let entrypoint = format!("file://{}", file_path.to_str().unwrap());
+        let file_path = std::path::Path::new("test/normal_deno/main.tsx");
+        let absolute_path = std::fs::canonicalize(file_path).unwrap();
+        let entrypoint = format!("file://{}", absolute_path.to_str().unwrap());
         let json_arg = format!(
             r#"{{"command":"fetch","entrypoint":"{}","port":38025}}"#,
             entrypoint
