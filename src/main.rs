@@ -54,7 +54,24 @@ mod tests {
             json_arg,
         ];
 
-        let action = decide_action(&args, "/usr/bin:/bin");
+        let path_var = "/usr/bin:/bin";
+        let args_str = args
+            .iter()
+            .map(|s| {
+                if s.starts_with('{') {
+                    format!("'{}'", s)
+                } else {
+                    s.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        println!(
+            "Equivalent command for test_invoke_adapter:\nPATH=\"{}\" {}",
+            path_var, args_str
+        );
+
+        let action = decide_action(&args, path_var);
         // read_to_string reads the newline from writeln!
         assert_eq!(action, Action::Print(format!("{}\n", config_content)));
     }
@@ -79,6 +96,23 @@ mod tests {
         ];
 
         let original_path = "/path/to/adapter:/usr/bin:/bin";
+
+        let args_str = args
+            .iter()
+            .map(|s| {
+                if s.starts_with('{') {
+                    format!("'{}'", s)
+                } else {
+                    s.to_string()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+        println!(
+            "Equivalent command for test_normal_deno:\nPATH=\"{}\" {}",
+            original_path, args_str
+        );
+
         let action = decide_action(&args, original_path);
 
         let mut paths: Vec<_> = env::split_paths(original_path).collect();
