@@ -26,9 +26,12 @@ pub enum Action {
 pub fn decide_action(args: &[String], path_var: &str) -> Action {
     debug_log!("decide_action called with args: {:?}", args);
     debug_log!("original PATH: {}", path_var);
-    let is_shadowing_deno = args.get(0).map_or(false, |a| {
-        std::path::Path::new(a).file_name() == Some(std::ffi::OsStr::new("deno"))
-    });
+    let mut is_shadowing_deno = false;
+    if let Some(executable_path) = args.get(0) {
+        if let Some(file_name) = std::path::Path::new(executable_path).file_name() {
+            is_shadowing_deno = file_name == "deno";
+        }
+    }
     debug_log!("is_shadowing_deno: {}", is_shadowing_deno);
 
     let create_new_path = || {
