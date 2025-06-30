@@ -22,6 +22,9 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
         "--dev".to_string(),
         "/dev".to_string(),
         "--ro-bind".to_string(),
+        "/bin".to_string(),
+        "/bin".to_string(),
+        "--ro-bind".to_string(),
         "/usr".to_string(),
         "/usr".to_string(),
         "--symlink".to_string(),
@@ -135,7 +138,7 @@ fn main() {
             let mut command = Command::new("bwrap");
             command.args(&bwrap_args);
             command.arg("--");
-            command.arg("sh");
+            command.arg("/bin/sh");
             command.env("PORT", deno_args.port.to_string());
             let shell_script = format!("set -x\n{}", &config.exec);
             fs::write("cmd.sh", &shell_script).expect("Unable to write to cmd.sh");
