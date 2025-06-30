@@ -11,7 +11,7 @@ This logic allows `smallweb-adapter` to act as a transparent wrapper, either lau
 An example of how SmallWeb launches Deno:
 
 ```sh
-/usr/local/bin/deno run --allow-net --allow-import --allow-env --allow-sys --allow-ffi --unstable-kv --unstable-otel --unstable-temporal --node-modules-dir=none --no-prompt --quiet --allow-read=/home/taras/smallweb/post,/usr/local/bin/deno,/home/taras/.cache/deno/npm/registry.npmjs.org --allow-write=/home/taras/smallweb/post/data - '{"command":"fetch","entrypoint":"file:///home/taras/smallweb/post/main.ts","port":38025}'
+/usr/local/bin/deno run --allow-net --allow-import --allow-env --allow-sys --allow-ffi --unstable-kv --unstable-otel --unstable-temporal --node-modules-dir=none --no-prompt --quiet --allow-read=/home/web/smallweb/post,/usr/local/bin/deno,/home/web/.cache/deno/npm/registry.npmjs.org --allow-write=/home/web/smallweb/post/data - '{"command":"fetch","entrypoint":"file:///home/web/smallweb/post/main.ts","port":38025}'
 ```
 
 
