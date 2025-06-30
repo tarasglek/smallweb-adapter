@@ -1,29 +1,31 @@
 use std::env;
 use std::fmt;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
+use std::path::Path;
+use std::sync::{Mutex, OnceLock};
 
-static LOG_FILE_PATH: OnceLock<Option<PathBuf>> = OnceLock::new();
+static LOG_FILE: OnceLock<Mutex<Option<File>>> = OnceLock::new();
 
-fn get_log_path() -> &'static Option<PathBuf> {
-    LOG_FILE_PATH.get_or_init(|| {
-        env::var("SMALLWEB_APP_DIR").ok().map(|app_dir| {
-            Path::new(&app_dir)
+fn get_log_file() -> &'static Mutex<Option<File>> {
+    LOG_FILE.get_or_init(|| {
+        let file = env::var("SMALLWEB_APP_DIR").ok().and_then(|app_dir| {
+            let path = Path::new(&app_dir)
                 .join("logs")
-                .join("smallweb-wrapper.log")
-        })
+                .join("smallweb-wrapper.log");
+            OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(path)
+                .ok()
+        });
+        Mutex::new(file)
     })
 }
 
 pub fn log_internal(args: fmt::Arguments) {
-    if let Some(path) = get_log_path() {
-        if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-        {
+    if let Ok(mut guard) = get_log_file().lock() {
+        if let Some(file) = guard.as_mut() {
             let _ = writeln!(file, "{}", args);
         }
     }
