@@ -128,7 +128,8 @@ fn main() {
             command.arg("--");
             command.arg("sh");
             command.env("PORT", deno_args.port.to_string());
-            fs::write("cmd.sh", &config.exec).expect("Unable to write to cmd.sh");
+            let shell_script = format!("set -x\n{}", &config.exec);
+            fs::write("cmd.sh", &shell_script).expect("Unable to write to cmd.sh");
             command.arg("cmd.sh");
             debug_log!("Spawning command: {:?}", &command);
             spawn_and_wait_for_port(&mut command, deno_args.port);
