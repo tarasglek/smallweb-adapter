@@ -68,7 +68,7 @@ fn main() {
         std::process::exit(0);
     }
 
-    if args.iter().any(|arg| arg == "--version") {
+    if args.iter().any(|arg| arg == "--smallweb-adapter-version") {
         println!("smallweb-adapter v{}", env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
     }
