@@ -40,6 +40,9 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
         bwrap_args.push("--ro-bind".to_string());
         bwrap_args.push("/etc/resolv.conf".to_string());
         bwrap_args.push("/etc/resolv.conf".to_string());
+        bwrap_args.push("--ro-bind".to_string());
+        bwrap_args.push("/etc/ssl".to_string());
+        bwrap_args.push("/etc/ssl".to_string());
     }
 
     for arg in args {
