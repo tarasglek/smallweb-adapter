@@ -1,4 +1,4 @@
-`smallweb-adapter` is a Deno command-line adapter that allows launching non-Deno applications under SmallWeb, while retaining the same or stronger security guarantees via `bubblewrap`.
+`smallweb-adapter` is a Deno command-line adapter that allows launching non-Deno applications under SmallWeb, while retaining similar or stronger security guarantees via `bubblewrap`.
 
 It works by being placed in the `PATH` as `deno`. It inspects the command-line arguments intended for Deno and can decide to run a different command if the application's entrypoint is named main.tsx and is actually {exec:"some cmdline"} json ([example](test/invoke_adapter/main.tsx)).
 
