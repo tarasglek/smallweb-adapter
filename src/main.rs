@@ -24,6 +24,19 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let timeout = Duration::from_secs(30);
 
     loop {
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                eprintln!("error: child process exited early with status: {}", status);
+                std::process::exit(status.code().unwrap_or(1));
+            }
+            Ok(None) => { /* child is still running */ }
+            Err(e) => {
+                eprintln!("error: failed to check child process status: {}", e);
+                let _ = child.kill();
+                std::process::exit(1);
+            }
+        }
+
         if linux::is_port_listening(port) {
             eprintln!("READY");
             break;
