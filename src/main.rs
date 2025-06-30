@@ -8,45 +8,8 @@ use std::time::{Duration, Instant};
 mod logging;
 mod core;
 mod netstat;
+mod linux;
 use crate::core::{decide_action, Action};
-
-fn bind_mount(path: &str, rw: bool) -> [String; 3] {
-    let flag = if rw { "--bind" } else { "--ro-bind" };
-    [flag.to_string(), path.to_string(), path.to_string()]
-}
-
-fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
-    let mut bwrap_args: Vec<String> = [
-        "--die-with-parent", "--unshare-pid", "--new-session",
-        "--proc", "/proc", "--dev", "/dev",
-        "--symlink", "usr/lib64", "/lib64",
-    ]
-    .iter().map(String::from).collect();
-
-    bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| bind_mount(path, false)));
-
-    if args.iter().any(|arg| arg == "--allow-net") {
-        bwrap_args.push("--share-net".to_string());
-        bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| bind_mount(path, false)));
-    }
-
-    let read_args = args.iter()
-        .filter_map(|arg| arg.strip_prefix("--allow-read="))
-        .flat_map(|paths| paths.split(','))
-        .filter(|path| !path.is_empty())
-        .flat_map(|path| bind_mount(path, false));
-
-    let write_args = args.iter()
-        .filter_map(|arg| arg.strip_prefix("--allow-write="))
-        .flat_map(|paths| paths.split(','))
-        .filter(|path| !path.is_empty())
-        .flat_map(|path| bind_mount(path, true));
-
-    bwrap_args.extend(read_args);
-    bwrap_args.extend(write_args);
-
-    bwrap_args
-}
 
 fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let mut child = match command.spawn() {
@@ -123,7 +86,7 @@ fn main() {
 
     match decide_action(&args, &path_var) {
         Action::Exec(config, deno_args) => {
-            let bwrap_args = to_bubblewrap_args(&args);
+            let bwrap_args = linux::deno_sandbox_to_bubblewrap_args(&args);
             let mut command = Command::new("bwrap");
             command.args(&bwrap_args);
             command.arg("--");
