@@ -5,6 +5,7 @@ use std::process::Command;
 use std::thread;
 use std::time::{Duration, Instant};
 
+#[macro_use]
 mod logging;
 mod core;
 mod linux;
