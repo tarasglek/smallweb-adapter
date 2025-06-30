@@ -128,6 +128,7 @@ fn main() {
             if let Some(p) = new_path {
                 command.env("PATH", p);
             }
+            debug_log!("Executing command: {:?}", &command);
             let err = command.exec();
             eprintln!("Failed to exec deno: {}", err);
             std::process::exit(1);
