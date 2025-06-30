@@ -1,23 +1,18 @@
 `smallweb-adapter` is a Deno command-line adapter that allows launching non-Deno applications under SmallWeb, while retaining similar or stronger security guarantees via `bubblewrap`.
 
-It works by being placed in the `PATH` as `deno`. It inspects the command-line arguments intended for Deno and can decide to run a different command if the application's entrypoint is named main.tsx and is actually {exec:"some cmdline"} json ([example](test/invoke_adapter/main.tsx)).
+It works by being placed in the `PATH` as `deno`, allowing it to intercept commands intended for the Deno runtime. When executed, it inspects the command-line arguments to decide on one of two actions:
 
-smallweb launches deno like:
+1.  **Execute a non-Deno application via `bubblewrap`**: This occurs if the Deno entrypoint is a file (e.g., `main.tsx`) that contains a JSON object with an `exec` key, like `{"exec": "your-command --port $PORT"}`. The adapter will execute the specified command inside a `bubblewrap` sandbox, mapping Deno's security flags to `bubblewrap` arguments. An example of this special entrypoint can be found [here](test/invoke_adapter/main.tsx).
+
+2.  **Execute the original command with the real `deno`**: If the entrypoint is not a special JSON configuration file, the adapter assumes it's a standard Deno application. It finds the real `deno` executable in the system's `PATH` and re-invokes the original command, effectively passing control to the actual Deno runtime.
+
+This logic allows `smallweb-adapter` to act as a transparent wrapper, either launching a sandboxed custom process or deferring to the standard Deno runtime as appropriate.
+
+An example of how SmallWeb launches Deno:
 
 ```sh
 /usr/local/bin/deno run --allow-net --allow-import --allow-env --allow-sys --allow-ffi --unstable-kv --unstable-otel --unstable-temporal --node-modules-dir=none --no-prompt --quiet --allow-read=/home/taras/smallweb/post,/usr/local/bin/deno,/home/taras/.cache/deno/npm/registry.npmjs.org --allow-write=/home/taras/smallweb/post/data - '{"command":"fetch","entrypoint":"file:///home/taras/smallweb/post/main.ts","port":38025}'
 ```
-
-Our rust smallweb-adapter will also be named deno and be first in path:
-- Parse the json in last arg
-- check that entrypoint ends in main.tsx
-- read first byte of that file, if it's '{', attempt to parse it as json
-- if main.tsx fails to parse as json:
- * look at PATH..remove first element of it(using ; separator), set it as env var
- * exec deno  as last thing it does
-- if main.tsx does parse
- * schema of it is {exec: "bash cmd with $PORT"}
- * execute the command in `exec`, with `$PORT` available as an environment variable.
 
 
 # Security
