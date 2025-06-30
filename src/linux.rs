@@ -9,7 +9,7 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String]) -> Vec<String> {
         "--proc", "/proc", "--dev", "/dev",
         "--symlink", "usr/lib64", "/lib64",
     ]
-    .iter().map(String::from).collect();
+    .into_iter().map(String::from).collect();
 
     bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| bind_mount(path, false)));
 
