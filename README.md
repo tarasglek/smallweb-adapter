@@ -33,10 +33,13 @@ Here's how the flags are mapped:
 
 # Debugging
 
-Set the `DEBUG` environment variable to enable logging.
+This application logs to `$SMALLWEB_APP_DIR/logs/smallweb-wrapper.log`. To enable logging, you must first create the `logs` directory inside your SmallWeb application directory, for example:
 
-- If `DEBUG` is set to any value (e.g., `DEBUG=1`), logs will be printed to stderr.
-- If `DEBUG` is set to a value containing a `.` (e.g., `DEBUG=debug.log`), it will be treated as a file path, and logs will be appended to that file.
+```sh
+mkdir -p /path/to/your/smallweb-app/logs
+```
+
+If the `logs` directory does not exist, or if the log file cannot be written to, logging will be silently disabled.
 
 The debug logs will start with the current working directory and the command-line arguments quoted for easy shell reuse.
 
