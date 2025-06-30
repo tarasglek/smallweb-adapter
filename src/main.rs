@@ -52,12 +52,7 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     }
 
     let status = child.wait().expect("Failed to wait on child process");
-    if let Some(code) = status.code() {
-        std::process::exit(code);
-    } else {
-        // Process terminated by signal
-        std::process::exit(1);
-    }
+    std::process::exit(status.code().unwrap_or(1));
 }
 
 fn main() {
