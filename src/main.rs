@@ -7,7 +7,6 @@ use std::time::{Duration, Instant};
 
 mod logging;
 mod core;
-mod netstat;
 mod linux;
 use crate::core::{decide_action, Action};
 
@@ -24,7 +23,7 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
     let timeout = Duration::from_secs(30);
 
     loop {
-        if netstat::is_port_listening(port) {
+        if linux::is_port_listening(port) {
             eprintln!("READY");
             break;
         }

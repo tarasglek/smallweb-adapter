@@ -1,3 +1,35 @@
+use std::process::Command;
+
+pub fn is_port_listening(port: u16) -> bool {
+    debug_log!("[netstat] checking for port {}", port);
+    let output = match Command::new("netstat").arg("-tln").output() {
+        Ok(output) => output,
+        Err(e) => {
+            debug_log!("[netstat] failed to run: {}", e);
+            // netstat might not be installed, or we are on a system that doesn't have it.
+            // We can't check, so we'll have to assume it's not listening, or handle this case diff
+            // For now, let's assume it's not listening if we can't run netstat.
+            return false;
+        }
+    };
+
+    if !output.status.success() {
+        debug_log!("[netstat] failed with status: {}", output.status);
+        return false;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for line in stdout.lines() {
+        if line.contains(&format!(":{}", port)) {
+            debug_log!("[netstat] found port {} in use", port);
+            return true;
+        }
+    }
+
+    debug_log!("[netstat] port {} not in use", port);
+    false
+}
+
 fn bind_mount(path: &str, rw: bool) -> [String; 3] {
     let flag = if rw { "--bind" } else { "--ro-bind" };
     [flag.to_string(), path.to_string(), path.to_string()]
