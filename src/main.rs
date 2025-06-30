@@ -95,6 +95,8 @@ fn main() {
 
 	// workaround for smallweb not passing PATH through
     let mut path_var = env::var("PATH").unwrap_or_default();
+    // smallweb likes to remove all ENV vars
+    // put PATH back
     if path_var.is_empty() {
         if let Ok(output) = Command::new("/bin/bash")
             .arg("--login")
@@ -104,6 +106,7 @@ fn main() {
         {
             if output.status.success() {
                 path_var = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                env::set_var("PATH", &path_var);
             }
         }
     }
