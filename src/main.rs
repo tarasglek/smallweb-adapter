@@ -37,6 +37,9 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
 
     if has_allow_net {
         bwrap_args.push("--share-net".to_string());
+        bwrap_args.push("--ro-bind".to_string());
+        bwrap_args.push("/etc/resolv.conf".to_string());
+        bwrap_args.push("/etc/resolv.conf".to_string());
     }
 
     for arg in args {
