@@ -10,7 +10,8 @@ mod core;
 mod netstat;
 use crate::core::{decide_action, Action};
 
-fn identical_bind(flag: &str, path: &str) -> [String; 3] {
+fn bind_mount(path: &str, rw: bool) -> [String; 3] {
+    let flag = if rw { "--bind" } else { "--ro-bind" };
     [flag.to_string(), path.to_string(), path.to_string()]
 }
 
@@ -22,24 +23,24 @@ fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
     ]
     .iter().map(String::from).collect();
 
-    bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| identical_bind("--ro-bind", path)));
+    bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| bind_mount(path, false)));
 
     if args.iter().any(|arg| arg == "--allow-net") {
         bwrap_args.push("--share-net".to_string());
-        bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| identical_bind("--ro-bind", path)));
+        bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| bind_mount(path, false)));
     }
 
     let read_args = args.iter()
         .filter_map(|arg| arg.strip_prefix("--allow-read="))
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
-        .flat_map(|path| identical_bind("--ro-bind", path));
+        .flat_map(|path| bind_mount(path, false));
 
     let write_args = args.iter()
         .filter_map(|arg| arg.strip_prefix("--allow-write="))
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
-        .flat_map(|path| identical_bind("--bind", path));
+        .flat_map(|path| bind_mount(path, true));
 
     bwrap_args.extend(read_args);
     bwrap_args.extend(write_args);
