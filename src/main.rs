@@ -10,60 +10,39 @@ mod core;
 mod netstat;
 use crate::core::{decide_action, Action};
 
+fn identical_bind(flag: &str, path: &str) -> [String; 3] {
+    [flag.to_string(), path.to_string(), path.to_string()]
+}
+
 fn to_bubblewrap_args(args: &[String]) -> Vec<String> {
-    let has_allow_net = args.contains(&"--allow-net".to_string());
+    let mut bwrap_args: Vec<String> = [
+        "--die-with-parent", "--unshare-pid", "--new-session",
+        "--proc", "/proc", "--dev", "/dev",
+        "--symlink", "usr/lib64", "/lib64",
+    ]
+    .iter().map(String::from).collect();
 
-    let mut bwrap_args = vec![
-        "--die-with-parent".to_string(),
-        "--unshare-pid".to_string(),
-        "--new-session".to_string(),
-        "--proc".to_string(),
-        "/proc".to_string(),
-        "--dev".to_string(),
-        "/dev".to_string(),
-        "--ro-bind".to_string(),
-        "/bin".to_string(),
-        "/bin".to_string(),
-        "--ro-bind".to_string(),
-        "/usr".to_string(),
-        "/usr".to_string(),
-        "--ro-bind".to_string(),
-        "/lib".to_string(),
-        "/lib".to_string(),
-        "--symlink".to_string(),
-        "usr/lib64".to_string(),
-        "/lib64".to_string(),
-    ];
+    bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| identical_bind("--ro-bind", path)));
 
-    if has_allow_net {
+    if args.iter().any(|arg| arg == "--allow-net") {
         bwrap_args.push("--share-net".to_string());
-        bwrap_args.push("--ro-bind".to_string());
-        bwrap_args.push("/etc/resolv.conf".to_string());
-        bwrap_args.push("/etc/resolv.conf".to_string());
-        bwrap_args.push("--ro-bind".to_string());
-        bwrap_args.push("/etc/ssl".to_string());
-        bwrap_args.push("/etc/ssl".to_string());
+        bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| identical_bind("--ro-bind", path)));
     }
 
-    for arg in args {
-        if let Some(paths) = arg.strip_prefix("--allow-read=") {
-            for path in paths.split(',') {
-                if !path.is_empty() {
-                    bwrap_args.push("--ro-bind".to_string());
-                    bwrap_args.push(path.to_string());
-                    bwrap_args.push(path.to_string());
-                }
-            }
-        } else if let Some(paths) = arg.strip_prefix("--allow-write=") {
-            for path in paths.split(',') {
-                if !path.is_empty() {
-                    bwrap_args.push("--bind".to_string());
-                    bwrap_args.push(path.to_string());
-                    bwrap_args.push(path.to_string());
-                }
-            }
-        }
-    }
+    let read_args = args.iter()
+        .filter_map(|arg| arg.strip_prefix("--allow-read="))
+        .flat_map(|paths| paths.split(','))
+        .filter(|path| !path.is_empty())
+        .flat_map(|path| identical_bind("--ro-bind", path));
+
+    let write_args = args.iter()
+        .filter_map(|arg| arg.strip_prefix("--allow-write="))
+        .flat_map(|paths| paths.split(','))
+        .filter(|path| !path.is_empty())
+        .flat_map(|path| identical_bind("--bind", path));
+
+    bwrap_args.extend(read_args);
+    bwrap_args.extend(write_args);
 
     bwrap_args
 }
