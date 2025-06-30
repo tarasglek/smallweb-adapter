@@ -82,6 +82,7 @@ fn main() {
         .collect();
     debug_log!("{}", quoted_args.join(" "));
 
+	// workaround for smallweb not passing PATH through
     let mut path_var = env::var("PATH").unwrap_or_default();
     if path_var.is_empty() {
         if let Ok(output) = Command::new("/bin/bash")

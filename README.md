@@ -34,9 +34,7 @@ This application logs to `$SMALLWEB_APP_DIR/logs/smallweb-wrapper.log`. To enabl
 mkdir -p /path/to/your/smallweb-app/logs
 ```
 
-If the `logs` directory does not exist, or if the log file cannot be written to, logging will be silently disabled.
-
-The debug logs will start with the current working directory and the command-line arguments quoted for easy shell reuse.
+If the `logs` directory does not exist, or if the log file cannot be written to, logging will be off.
 
 
 # Tests
