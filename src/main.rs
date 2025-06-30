@@ -3,7 +3,7 @@ use std::fs;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 mod logging;
 mod core;
@@ -65,10 +65,19 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
         }
     };
 
+    let start = Instant::now();
+    let timeout = Duration::from_secs(30);
+
     loop {
         if netstat::is_port_listening(port) {
             eprintln!("READY");
             break;
+        }
+
+        if start.elapsed() > timeout {
+            eprintln!("error: timed out waiting for port {}", port);
+            let _ = child.kill();
+            std::process::exit(1);
         }
 
         thread::sleep(Duration::from_millis(100));
