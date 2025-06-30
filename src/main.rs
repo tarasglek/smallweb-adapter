@@ -62,6 +62,17 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
 fn main() {
     let args: Vec<String> = env::args().collect();
 
+    if args.iter().any(|arg| arg == "--help") {
+        println!("smallweb-adapter: a not-deno adapter for smallweb.");
+        println!("For more information, visit https://github.com/tarasglek/smallweb-adapter");
+        std::process::exit(0);
+    }
+
+    if args.iter().any(|arg| arg == "--version") {
+        println!("smallweb-adapter v{}", env!("CARGO_PKG_VERSION"));
+        std::process::exit(0);
+    }
+
     let cwd = env::current_dir().map_or_else(|_| "unknown".to_string(), |p| p.display().to_string());
     debug_log!("CWD: {}", cwd);
 
