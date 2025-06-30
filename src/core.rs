@@ -26,11 +26,13 @@ pub enum Action {
 pub fn decide_action(args: &[String], path_var: &str) -> Action {
     debug_log!("decide_action called with args: {:?}", args);
     debug_log!("original PATH: {}", path_var);
-    let should_change_path = args.get(0).map_or(false, |a| a.ends_with("deno"));
-    debug_log!("should_change_path: {}", should_change_path);
+    let is_shadowing_deno = args.get(0).map_or(false, |a| {
+        std::path::Path::new(a).file_name() == Some(std::ffi::OsStr::new("deno"))
+    });
+    debug_log!("is_shadowing_deno: {}", is_shadowing_deno);
 
     let create_new_path = || {
-        if should_change_path {
+        if is_shadowing_deno {
             let mut paths: Vec<_> = env::split_paths(path_var).collect();
             let mut found = false;
             paths.retain(|p| {
