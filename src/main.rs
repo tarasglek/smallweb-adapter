@@ -1,7 +1,8 @@
 use std::env;
 use std::fs;
+use std::io::Write;
 use std::os::unix::process::CommandExt;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -26,7 +27,10 @@ fn check_child_status(child: &mut std::process::Child) {
     }
 }
 
-fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
+fn spawn_and_wait_for_port(command: &mut Command, port: u16, shell_script: Option<&str>) {
+    if shell_script.is_some() {
+        command.stdin(Stdio::piped());
+    }
     let mut child = match command.spawn() {
         Ok(child) => child,
         Err(e) => {
@@ -34,6 +38,16 @@ fn spawn_and_wait_for_port(command: &mut Command, port: u16) {
             std::process::exit(1);
         }
     };
+
+    if let Some(script) = shell_script {
+        if let Some(mut stdin) = child.stdin.take() {
+            if let Err(e) = stdin.write_all(script.as_bytes()) {
+                eprintln!("error: failed to write to child stdin: {}", e);
+                let _ = child.kill();
+                std::process::exit(1);
+            }
+        }
+    }
 
     let start = Instant::now();
     let timeout = Duration::from_secs(30);
@@ -120,10 +134,8 @@ fn main() {
             command.arg("/bin/sh");
             command.env("PORT", deno_args.port.to_string());
             let shell_script = format!("set -x\n{}", &config.exec);
-            fs::write("cmd.sh", &shell_script).expect("Unable to write to cmd.sh");
-            command.arg("cmd.sh");
             debug_log!("Spawning command: {:?}", &command);
-            spawn_and_wait_for_port(&mut command, deno_args.port);
+            spawn_and_wait_for_port(&mut command, deno_args.port, Some(&shell_script));
         }
         Action::ExecDeno { new_path } => {
             let mut command = Command::new("deno");
