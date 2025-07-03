@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
+use std::path::PathBuf;
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[allow(dead_code)] // command is unused for now
@@ -23,9 +24,14 @@ pub enum Action {
     ExecDeno { new_path: Option<OsString> },
 }
 
-pub fn decide_action(args: &[String], path_var: &str) -> Action {
+pub fn decide_action(args: &[String], path_var: &str) -> (Action, Option<PathBuf>) {
     debug_log!("decide_action called with args: {:?}", args);
     debug_log!("original PATH: {}", path_var);
+    let own_abs_path = args
+        .get(0)
+        .and_then(|p| std::fs::canonicalize(p).ok());
+    debug_log!("own_abs_path: {:?}", own_abs_path);
+
     let mut is_shadowing_deno = false;
     if let Some(executable_path) = args.get(0) {
         if let Some(file_name) = std::path::Path::new(executable_path).file_name() {
@@ -55,8 +61,13 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
         }
     };
 
-    let fallback = || Action::ExecDeno {
-        new_path: create_new_path(),
+    let fallback = || {
+        (
+            Action::ExecDeno {
+                new_path: create_new_path(),
+            },
+            own_abs_path.clone(),
+        )
     };
 
     let last_arg = if let Some(arg) = args.last() {
@@ -100,7 +111,7 @@ pub fn decide_action(args: &[String], path_var: &str) -> Action {
             debug_log!(
                 "Successfully parsed file_content as MainTsxConfig, returning Action::Exec."
             );
-            Action::Exec(config, deno_args)
+            (Action::Exec(config, deno_args), own_abs_path)
         } else {
             debug_log!("Failed to parse file_content as MainTsxConfig, falling back.");
             fallback()

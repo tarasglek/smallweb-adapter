@@ -124,7 +124,8 @@ fn main() {
         }
     }
 
-    match decide_action(&args, &path_var) {
+    let (action, _own_abs_path) = decide_action(&args, &path_var);
+    match action {
         Action::Exec(config, deno_args) => {
             let bwrap_args = linux::deno_sandbox_to_bubblewrap_args(&args);
             let mut command = Command::new("bwrap");
@@ -181,7 +182,8 @@ mod tests {
             dir, args_str
         );
 
-        let action = decide_action(&args, path_var);
+        let (action, own_abs_path) = decide_action(&args, path_var);
+        assert!(own_abs_path.is_none());
         let expected_deno_args = DenoArgs {
             command: "fetch".to_string(),
             entrypoint,
@@ -220,7 +222,8 @@ mod tests {
         let original_path =
             env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
-        let action = decide_action(&args, original_path.to_str().unwrap());
+        let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
+        assert!(own_abs_path.is_none());
 
         let expected_new_path =
             env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
@@ -254,7 +257,8 @@ mod tests {
         let original_path =
             env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
-        let action = decide_action(&args, original_path.to_str().unwrap());
+        let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
+        assert!(own_abs_path.is_none());
 
         let expected_new_path =
             env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
