@@ -307,4 +307,65 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_path_canonicalization_with_symlink() {
+        // This test ensures that our PATH manipulation logic correctly handles
+        // canonicalization, for example when a path contains symlinks.
+
+        // 1. Setup:
+        // - A directory for the real deno: /tmp/real_deno/deno
+        // - A directory for our adapter: /tmp/adapter/deno
+        // - A symlink to our adapter's directory: /tmp/symlink_dir -> /tmp/adapter
+        let temp_dir = tempdir().unwrap();
+        let real_deno_dir = temp_dir.path().join("real_deno");
+        std::fs::create_dir(&real_deno_dir).unwrap();
+        std::fs::File::create(real_deno_dir.join("deno")).unwrap();
+
+        let adapter_dir = temp_dir.path().join("adapter");
+        std::fs::create_dir(&adapter_dir).unwrap();
+        let adapter_path = adapter_dir.join("deno");
+        std::fs::File::create(&adapter_path).unwrap();
+
+        let symlink_dir = temp_dir.path().join("symlink_dir");
+        std::os::unix::fs::symlink(&adapter_dir, &symlink_dir).unwrap();
+
+        // 2. Construct PATH:
+        // The PATH will contain the symlinked directory first, then the real deno dir.
+        // Our logic should remove the symlinked entry and keep the real one.
+        let original_path = env::join_paths(
+            [
+                &symlink_dir,
+                &real_deno_dir,
+                Path::new("/usr/bin"),
+            ]
+            .iter(),
+        )
+        .unwrap();
+
+        let args = vec![
+            adapter_path.to_str().unwrap().to_string(),
+            "run".to_string(),
+            "foo.ts".to_string(),
+        ];
+
+        // 3. Run decide_action and assert
+        let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
+        assert_eq!(
+            own_abs_path,
+            std::fs::canonicalize(&adapter_path).unwrap()
+        );
+
+        // The symlink_dir should be removed from the path, leaving real_deno_dir.
+        let expected_new_path =
+            env::join_paths([&real_deno_dir, Path::new("/usr/bin")].iter()).unwrap();
+
+        assert_eq!(
+            action,
+            Action::ExecDeno {
+                new_path: Some(expected_new_path)
+            }
+        );
+    }
 }
