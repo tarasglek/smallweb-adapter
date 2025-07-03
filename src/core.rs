@@ -21,7 +21,7 @@ pub struct SmallwebConfig {
 
 #[derive(Debug, PartialEq)]
 pub enum Action {
-    Exec(MainTsxConfig, DenoArgs),
+    Exec(SmallwebConfig, DenoArgs),
     ExecDeno { new_path: Option<OsString> },
 }
 
