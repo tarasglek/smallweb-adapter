@@ -160,6 +160,10 @@ mod tests {
 
     #[test]
     fn test_invoke_adapter() {
+        let temp_dir = tempdir().unwrap();
+        let fake_deno_path = temp_dir.path().join("deno");
+        std::fs::File::create(&fake_deno_path).unwrap();
+
         let file_path = std::path::Path::new("test/invoke_adapter/main.tsx");
         let absolute_path = std::fs::canonicalize(file_path).unwrap();
         let entrypoint = format!("file://{}", absolute_path.to_str().unwrap());
@@ -168,7 +172,7 @@ mod tests {
             entrypoint
         );
         let args = vec![
-            "deno".to_string(),
+            fake_deno_path.to_str().unwrap().to_string(),
             "run".to_string(),
             "--allow-net".to_string(),
             json_arg.clone(),
@@ -183,7 +187,10 @@ mod tests {
         );
 
         let (action, own_abs_path) = decide_action(&args, path_var);
-        assert!(own_abs_path.is_none());
+        assert_eq!(
+            own_abs_path,
+            std::fs::canonicalize(&fake_deno_path).unwrap()
+        );
         let expected_deno_args = DenoArgs {
             command: "fetch".to_string(),
             entrypoint,
@@ -208,8 +215,12 @@ mod tests {
             r#"{{"command":"fetch","entrypoint":"{}","port":38025}}"#,
             entrypoint
         );
+        let temp_dir_adapter = tempdir().unwrap();
+        let adapter_path = temp_dir_adapter.path().join("deno");
+        std::fs::File::create(&adapter_path).unwrap();
+
         let args = vec![
-            "/path/to/adapter/deno".to_string(),
+            adapter_path.to_str().unwrap().to_string(),
             "run".to_string(),
             "--allow-net".to_string(),
             json_arg.clone(),
@@ -223,7 +234,10 @@ mod tests {
             env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
         let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
-        assert!(own_abs_path.is_none());
+        assert_eq!(
+            own_abs_path,
+            std::fs::canonicalize(&adapter_path).unwrap()
+        );
 
         let expected_new_path =
             env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
@@ -243,8 +257,12 @@ mod tests {
             r#"{{"command":"fetch","entrypoint":"{}","port":42541}}"#,
             entrypoint
         );
+        let temp_dir_adapter = tempdir().unwrap();
+        let adapter_path = temp_dir_adapter.path().join("deno");
+        std::fs::File::create(&adapter_path).unwrap();
+
         let args = vec![
-            "/path/to/adapter/deno".to_string(),
+            adapter_path.to_str().unwrap().to_string(),
             "run".to_string(),
             "-".to_string(),
             json_arg.clone(),
@@ -258,7 +276,10 @@ mod tests {
             env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
         let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
-        assert!(own_abs_path.is_none());
+        assert_eq!(
+            own_abs_path,
+            std::fs::canonicalize(&adapter_path).unwrap()
+        );
 
         let expected_new_path =
             env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();

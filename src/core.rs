@@ -24,12 +24,13 @@ pub enum Action {
     ExecDeno { new_path: Option<OsString> },
 }
 
-pub fn decide_action(args: &[String], path_var: &str) -> (Action, Option<PathBuf>) {
+pub fn decide_action(args: &[String], path_var: &str) -> (Action, PathBuf) {
     debug_log!("decide_action called with args: {:?}", args);
     debug_log!("original PATH: {}", path_var);
     let own_abs_path = args
         .get(0)
-        .and_then(|p| std::fs::canonicalize(p).ok());
+        .and_then(|p| std::fs::canonicalize(p).ok())
+        .expect("Failed to get absolute path of executable from args[0]");
     debug_log!("own_abs_path: {:?}", own_abs_path);
 
     let mut is_shadowing_deno = false;
