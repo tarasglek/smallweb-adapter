@@ -155,7 +155,7 @@ fn main() {
 mod tests {
     use crate::core::{decide_action, Action, DenoArgs};
     use std::env;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use tempfile::tempdir;
 
     #[test]
@@ -336,10 +336,13 @@ mod tests {
         // Our logic should remove the symlinked entry and keep the real one.
         // We also add the symlink path with a trailing slash to test that case.
         let symlink_dir_with_slash = PathBuf::from(format!("{}/", symlink_dir.to_str().unwrap()));
+        let symlink_dir_with_multiple_slashes =
+            PathBuf::from(format!("{}////", symlink_dir.to_str().unwrap()));
         let original_path = env::join_paths(
             [
                 &symlink_dir,
                 &symlink_dir_with_slash,
+                &symlink_dir_with_multiple_slashes,
                 &real_deno_dir,
                 Path::new("/usr/bin"),
             ]
