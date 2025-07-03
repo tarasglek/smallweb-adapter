@@ -138,7 +138,7 @@ fn main() {
             // escape for single-quoted shell string
             let shell_script_escaped = format!("'{}'", shell_script.replace('\'', "'\\''"));
             debug_log!(
-                "Spawning command: PORT={} echo {} | {}",
+                "Spawning command:\nPORT={} echo {} | {}",
                 deno_args.port,
                 shell_script_escaped,
                 bwrap_command_str
