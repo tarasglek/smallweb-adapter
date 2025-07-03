@@ -52,14 +52,13 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<
         bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| bind_mount(path, false)));
     }
 
-    let own_parent_dir = own_path.parent();
-    let parent_meta = own_parent_dir.and_then(|p| p.metadata().ok());
+    let own_meta = own_path.metadata().ok();
 
     let should_bind = |path_str: &str| -> bool {
-        if let Some(parent_meta) = &parent_meta {
+        if let Some(own_meta) = &own_meta {
             let path = Path::new(path_str);
             if let Ok(p_meta) = path.metadata() {
-                if p_meta.dev() == parent_meta.dev() && p_meta.ino() == parent_meta.ino() {
+                if p_meta.dev() == own_meta.dev() && p_meta.ino() == own_meta.ino() {
                     debug_log!("skipping bind mount for own path: {}", path_str);
                     return false;
                 }
@@ -148,18 +147,19 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let own_path_dir = temp_dir.path();
         let own_path = own_path_dir.join("deno");
+        std::fs::File::create(&own_path).unwrap();
 
+        let own_path_str = own_path.to_str().unwrap();
         let args = to_string_vec(&[
-            &format!("--allow-read={}", own_path_dir.to_str().unwrap()),
+            &format!("--allow-read={}", own_path_str),
             "--allow-write=/data",
         ]);
         let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, &own_path);
 
-        // Should not contain the bind mount for its own directory
-        let own_path_dir_str = own_path_dir.to_str().unwrap();
+        // Should not contain the bind mount for its own path
         assert!(!bwrap_args
             .windows(3)
-            .any(|w| w == ["--ro-bind", own_path_dir_str, own_path_dir_str]));
+            .any(|w| w == ["--ro-bind", own_path_str, own_path_str]));
         // Should still contain the other bind mount
         assert!(bwrap_args
             .windows(3)
