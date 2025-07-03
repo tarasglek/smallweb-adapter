@@ -52,7 +52,8 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<
     bwrap_args.extend(
         ["/bin", "/usr", "/lib"]
             .iter()
-            .flat_map(|&path| bind_mount(path, false)),
+            .flat_map(|&path| bind_mount(path, false))
+            .flatten(),
     );
 
     if args.iter().any(|arg| arg == "--allow-net") {
@@ -60,7 +61,8 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<
         bwrap_args.extend(
             ["/etc/resolv.conf", "/etc/ssl"]
                 .iter()
-                .flat_map(|&path| bind_mount(path, false)),
+                .flat_map(|&path| bind_mount(path, false))
+                .flatten(),
         );
     }
 
@@ -84,14 +86,16 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
         .filter(|path| should_bind(path))
-        .flat_map(|path| bind_mount(path, false));
+        .flat_map(|path| bind_mount(path, false))
+        .flatten();
 
     let write_args = args.iter()
         .filter_map(|arg| arg.strip_prefix("--allow-write="))
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
         .filter(|path| should_bind(path))
-        .flat_map(|path| bind_mount(path, true));
+        .flat_map(|path| bind_mount(path, true))
+        .flatten();
 
     bwrap_args.extend(read_args);
     bwrap_args.extend(write_args);
