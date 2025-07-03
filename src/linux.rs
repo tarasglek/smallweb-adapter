@@ -147,17 +147,6 @@ mod tests {
             .any(|w| w == ["--ro-bind", "/tmp", "/tmp"]));
     }
 
-    #[test]
-    fn test_with_allow_read_non_existent() {
-        let temp_dir = tempdir().unwrap();
-        let non_existent_path = temp_dir.path().join("non_existent");
-        let non_existent_path_str = non_existent_path.to_str().unwrap();
-        let args = to_string_vec(&[&format!("--allow-read={}", non_existent_path_str)]);
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
-        assert!(!bwrap_args
-            .windows(3)
-            .any(|w| w == ["--ro-bind", non_existent_path_str, non_existent_path_str]));
-    }
 
     #[test]
     fn test_with_allow_write() {
@@ -199,30 +188,57 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_own_path() {
+    fn test_path_filtering() {
         let temp_dir = tempdir().unwrap();
-        let own_path_dir = temp_dir.path();
-        let own_path = own_path_dir.join("deno");
+        let temp_path = temp_dir.path();
+
+        // 1. Setup paths
+        let own_path = temp_path.join("deno");
         std::fs::File::create(&own_path).unwrap();
-
-        let data_dir = temp_dir.path().join("data");
-        std::fs::create_dir(&data_dir).unwrap();
-        let data_dir_str = data_dir.to_str().unwrap();
-
         let own_path_str = own_path.to_str().unwrap();
+
+        let non_existent_path = temp_path.join("non_existent");
+        let non_existent_path_str = non_existent_path.to_str().unwrap();
+
+        let readable_path = temp_path.join("readable");
+        std::fs::create_dir(&readable_path).unwrap();
+        let readable_path_str = readable_path.to_str().unwrap();
+
+        let writable_path = temp_path.join("writable");
+        std::fs::create_dir(&writable_path).unwrap();
+        let writable_path_str = writable_path.to_str().unwrap();
+
+        // 2. Construct args
         let args = to_string_vec(&[
-            &format!("--allow-read={}", own_path_str),
-            &format!("--allow-write={}", data_dir_str),
+            &format!(
+                "--allow-read={},{},{}",
+                own_path_str, non_existent_path_str, readable_path_str
+            ),
+            &format!("--allow-write={}", writable_path_str),
         ]);
+
+        // 3. Run function
         let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, &own_path);
 
+        // 4. Assertions
         // Should not contain the bind mount for its own path
         assert!(!bwrap_args
             .windows(3)
             .any(|w| w == ["--ro-bind", own_path_str, own_path_str]));
-        // Should still contain the other bind mount
+
+        // Should not contain the bind mount for the non-existent path
+        assert!(!bwrap_args
+            .windows(3)
+            .any(|w| w == ["--ro-bind", non_existent_path_str, non_existent_path_str]));
+
+        // Should contain the bind mount for the readable path
         assert!(bwrap_args
             .windows(3)
-            .any(|w| w == ["--bind", data_dir_str, data_dir_str]));
+            .any(|w| w == ["--ro-bind", readable_path_str, readable_path_str]));
+
+        // Should contain the bind mount for the writable path
+        assert!(bwrap_args
+            .windows(3)
+            .any(|w| w == ["--bind", writable_path_str, writable_path_str]));
     }
 }
