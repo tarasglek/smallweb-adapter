@@ -134,7 +134,15 @@ fn main() {
             command.arg("/bin/sh");
             command.env("PORT", deno_args.port.to_string());
             let shell_script = format!("set -x\n{}", &config.exec);
-            debug_log!("Spawning command: {:?}", &command);
+            let bwrap_command_str = format!("{:?}", &command);
+            // escape for single-quoted shell string
+            let shell_script_escaped = format!("'{}'", shell_script.replace('\'', "'\\''"));
+            debug_log!(
+                "Spawning command: PORT={} echo {} | {}",
+                deno_args.port,
+                shell_script_escaped,
+                bwrap_command_str
+            );
             spawn_and_wait_for_port(&mut command, deno_args.port, Some(&shell_script));
         }
         Action::ExecDeno { new_path } => {
