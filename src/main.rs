@@ -124,10 +124,10 @@ fn main() {
         }
     }
 
-    let (action, _own_abs_path) = decide_action(&args, &path_var);
+    let (action, own_abs_path) = decide_action(&args, &path_var);
     match action {
         Action::Exec(config, deno_args) => {
-            let bwrap_args = linux::deno_sandbox_to_bubblewrap_args(&args);
+            let bwrap_args = linux::deno_sandbox_to_bubblewrap_args(&args, &own_abs_path);
             let mut command = Command::new("bwrap");
             command.args(&bwrap_args);
             command.arg("--");

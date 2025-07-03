@@ -1,3 +1,7 @@
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
+use std::os::unix::fs::MetadataExt;
+use std::path::Path;
 use std::process::Command;
 
 pub fn is_port_listening(port: u16) -> bool {
@@ -35,7 +39,7 @@ fn bind_mount(path: &str, rw: bool) -> [String; 3] {
     [flag.to_string(), path.to_string(), path.to_string()]
 }
 
-pub fn deno_sandbox_to_bubblewrap_args(args: &[String]) -> Vec<String> {
+pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<String> {
     let mut bwrap_args: Vec<String> = [
         "--die-with-parent", "--unshare-pid", "--new-session",
         "--proc", "/proc", "--dev", "/dev",
@@ -45,21 +49,55 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String]) -> Vec<String> {
 
     bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| bind_mount(path, false)));
 
+    let own_parent_dir = own_path.parent();
+    let parent_meta = own_parent_dir.and_then(|p| p.metadata().ok());
+
+    let should_bind = |path_str: &str| {
+        if let Some(parent_meta) = &parent_meta {
+            let path = Path::new(path_str);
+            if let Ok(p_meta) = path.metadata() {
+                if p_meta.dev() == parent_meta.dev() && p_meta.ino() == parent_meta.ino() {
+                    debug_log!("skipping bind mount for own path: {}", path_str);
+                    return false;
+                }
+            }
+        }
+        !path_str.is_empty()
+    };
+
     if args.iter().any(|arg| arg == "--allow-net") {
         bwrap_args.push("--share-net".to_string());
         bwrap_args.extend(["/etc/resolv.conf", "/etc/ssl"].iter().flat_map(|&path| bind_mount(path, false)));
     }
 
+    let own_parent_dir = own_path.parent();
+    let parent_meta = own_parent_dir.and_then(|p| p.metadata().ok());
+
+    let should_bind = |path_str: &str| -> bool {
+        if let Some(parent_meta) = &parent_meta {
+            let path = Path::new(path_str);
+            if let Ok(p_meta) = path.metadata() {
+                if p_meta.dev() == parent_meta.dev() && p_meta.ino() == parent_meta.ino() {
+                    debug_log!("skipping bind mount for own path: {}", path_str);
+                    return false;
+                }
+            }
+        }
+        true
+    };
+
     let read_args = args.iter()
         .filter_map(|arg| arg.strip_prefix("--allow-read="))
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
+        .filter(|path| should_bind(path))
         .flat_map(|path| bind_mount(path, false));
 
     let write_args = args.iter()
         .filter_map(|arg| arg.strip_prefix("--allow-write="))
         .flat_map(|paths| paths.split(','))
         .filter(|path| !path.is_empty())
+        .filter(|path| should_bind(path))
         .flat_map(|path| bind_mount(path, true));
 
     bwrap_args.extend(read_args);
@@ -71,6 +109,8 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String]) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+    use tempfile::tempdir;
 
     fn to_string_vec(args: &[&str]) -> Vec<String> {
         args.iter().map(|s| s.to_string()).collect()
@@ -79,7 +119,7 @@ mod tests {
     #[test]
     fn test_basic_args() {
         let args = vec![];
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
         assert!(bwrap_args.contains(&"--die-with-parent".to_string()));
         assert!(bwrap_args.windows(3).any(|w| w == ["--ro-bind", "/bin", "/bin"]));
         assert!(!bwrap_args.contains(&"--share-net".to_string()));
@@ -88,7 +128,7 @@ mod tests {
     #[test]
     fn test_with_allow_net() {
         let args = to_string_vec(&["--allow-net"]);
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
         assert!(bwrap_args.contains(&"--share-net".to_string()));
         assert!(bwrap_args.windows(3).any(|w| w == ["--ro-bind", "/etc/resolv.conf", "/etc/resolv.conf"]));
     }
@@ -96,7 +136,7 @@ mod tests {
     #[test]
     fn test_with_allow_read() {
         let args = to_string_vec(&["--allow-read=/home/user,/tmp"]);
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
         assert!(bwrap_args.windows(3).any(|w| w == ["--ro-bind", "/home/user", "/home/user"]));
         assert!(bwrap_args.windows(3).any(|w| w == ["--ro-bind", "/tmp", "/tmp"]));
     }
@@ -104,7 +144,7 @@ mod tests {
     #[test]
     fn test_with_allow_write() {
         let args = to_string_vec(&["--allow-write=/data"]);
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
         assert!(bwrap_args.windows(3).any(|w| w == ["--bind", "/data", "/data"]));
     }
 
@@ -115,9 +155,32 @@ mod tests {
             "--allow-read=/home/user",
             "--allow-write=/data",
         ]);
-        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, Path::new("/fake/deno"));
         assert!(bwrap_args.contains(&"--share-net".to_string()));
         assert!(bwrap_args.windows(3).any(|w| w == ["--ro-bind", "/home/user", "/home/user"]));
         assert!(bwrap_args.windows(3).any(|w| w == ["--bind", "/data", "/data"]));
+    }
+
+    #[test]
+    fn test_filter_own_path() {
+        let temp_dir = tempdir().unwrap();
+        let own_path_dir = temp_dir.path();
+        let own_path = own_path_dir.join("deno");
+
+        let args = to_string_vec(&[
+            &format!("--allow-read={}", own_path_dir.to_str().unwrap()),
+            "--allow-write=/data",
+        ]);
+        let bwrap_args = deno_sandbox_to_bubblewrap_args(&args, &own_path);
+
+        // Should not contain the bind mount for its own directory
+        let own_path_dir_str = own_path_dir.to_str().unwrap();
+        assert!(!bwrap_args
+            .windows(3)
+            .any(|w| w == ["--ro-bind", own_path_dir_str, own_path_dir_str]));
+        // Should still contain the other bind mount
+        assert!(bwrap_args
+            .windows(3)
+            .any(|w| w == ["--bind", "/data", "/data"]));
     }
 }
