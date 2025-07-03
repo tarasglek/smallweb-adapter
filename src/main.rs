@@ -353,7 +353,7 @@ mod tests {
         // Use a path with multiple slashes for the adapter executable to test shadowing.
         let messy_adapter_path = format!("{}//deno", symlink_dir.to_str().unwrap());
         let args = vec![
-            messy_adapter_path,
+            messy_adapter_path.clone(),
             "run".to_string(),
             "foo.ts".to_string(),
         ];
