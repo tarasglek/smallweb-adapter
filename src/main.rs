@@ -230,8 +230,16 @@ mod tests {
         let deno_dir = temp_dir.path();
         std::fs::File::create(deno_dir.join("deno")).unwrap();
 
-        let original_path =
-            env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
+        let original_path = env::join_paths(
+            [
+                temp_dir_adapter.path(),
+                deno_dir,
+                Path::new("/usr/bin"),
+                Path::new("/bin"),
+            ]
+            .iter(),
+        )
+        .unwrap();
 
         let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
         assert_eq!(
@@ -240,7 +248,7 @@ mod tests {
         );
 
         let expected_new_path =
-            env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
+            env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
         assert_eq!(
             action,
@@ -272,8 +280,16 @@ mod tests {
         let deno_dir = temp_dir.path();
         std::fs::File::create(deno_dir.join("deno")).unwrap();
 
-        let original_path =
-            env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
+        let original_path = env::join_paths(
+            [
+                temp_dir_adapter.path(),
+                deno_dir,
+                Path::new("/usr/bin"),
+                Path::new("/bin"),
+            ]
+            .iter(),
+        )
+        .unwrap();
 
         let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
         assert_eq!(
@@ -282,7 +298,7 @@ mod tests {
         );
 
         let expected_new_path =
-            env::join_paths([Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
+            env::join_paths([deno_dir, Path::new("/usr/bin"), Path::new("/bin")].iter()).unwrap();
 
         assert_eq!(
             action,
