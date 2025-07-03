@@ -362,7 +362,7 @@ mod tests {
         let (action, own_abs_path) = decide_action(&args, original_path.to_str().unwrap());
         assert_eq!(
             own_abs_path,
-            std::fs::canonicalize(&adapter_path).unwrap()
+            std::fs::canonicalize(&messy_adapter_path).unwrap()
         );
 
         // The symlink_dir should be removed from the path, leaving real_deno_dir.
