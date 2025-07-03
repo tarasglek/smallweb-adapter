@@ -334,9 +334,12 @@ mod tests {
         // 2. Construct PATH:
         // The PATH will contain the symlinked directory first, then the real deno dir.
         // Our logic should remove the symlinked entry and keep the real one.
+        // We also add the symlink path with a trailing slash to test that case.
+        let symlink_dir_with_slash = PathBuf::from(format!("{}/", symlink_dir.to_str().unwrap()));
         let original_path = env::join_paths(
             [
                 &symlink_dir,
+                &symlink_dir_with_slash,
                 &real_deno_dir,
                 Path::new("/usr/bin"),
             ]
