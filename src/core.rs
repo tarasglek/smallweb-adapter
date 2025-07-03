@@ -44,15 +44,22 @@ pub fn decide_action(args: &[String], path_var: &str) -> (Action, PathBuf) {
     let create_new_path = || {
         if is_shadowing_deno {
             let mut paths: Vec<_> = env::split_paths(path_var).collect();
+            let own_parent_dir = own_abs_path.parent();
             let mut found = false;
             paths.retain(|p| {
-                if !found && p.join("deno").exists() {
-                    debug_log!("removing path entry: {:?}", p);
-                    found = true;
-                    false // remove this path
-                } else {
-                    true // keep this path
+                if found {
+                    return true;
                 }
+                if let Some(parent) = own_parent_dir {
+                    if let Ok(canonical_p) = p.canonicalize() {
+                        if canonical_p == parent {
+                            debug_log!("removing path entry: {:?}", p);
+                            found = true;
+                            return false;
+                        }
+                    }
+                }
+                true
             });
             let new_path = env::join_paths(paths).unwrap();
             debug_log!("new PATH: {:?}", new_path);
