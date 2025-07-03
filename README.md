@@ -7,12 +7,13 @@ It works by being placed in the `PATH` as `deno`, allowing it to intercept
 commands intended for the Deno runtime. When executed, it inspects the
 command-line arguments to decide on one of two actions:
 
-1. **Execute a non-Deno application via `bubblewrap`**: This occurs if the Deno
-   entrypoint is a file (e.g., `main.tsx`) that contains a JSON object with an
-   `exec` key, like `{"exec": "your-command --port $PORT"}`. The adapter will
-   execute the specified command inside a `bubblewrap` sandbox, mapping Deno's
-   security flags to `bubblewrap` arguments. An example of this special
-   entrypoint can be found [here](test/invoke_adapter/main.tsx).
+1. **Execute a non-Deno application via `bubblewrap`**: This occurs if the
+   directory containing the Deno entrypoint also contains a `smallweb.json`
+   file. This file should specify the command to run via an `exec` key, like
+   `{"exec": "your-command --port $PORT"}`. The adapter will execute the
+   specified command inside a `bubblewrap` sandbox, mapping Deno's security
+   flags to `bubblewrap` arguments. An example of this setup can be found in
+   [`test/invoke_adapter/smallweb.json`](test/invoke_adapter/smallweb.json).
 
 2. **Execute the original command with the real `deno`**: If the entrypoint is
    not a special JSON configuration file, the adapter assumes it's a standard
