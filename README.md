@@ -14,6 +14,15 @@ command-line arguments to decide on one of two actions:
    specified command inside a `bubblewrap` sandbox, mapping Deno's security
    flags to `bubblewrap` arguments. An example of this setup can be found in
    [`test/invoke_adapter/smallweb.json`](test/invoke_adapter/smallweb.json).
+   Note that for Smallweb to invoke the adapter, a dummy entrypoint file (e.g.,
+   `main.tsx`) must also exist. You can create it with a command like
+   `echo '// not used' > main.tsx`.
+   Note that for Smallweb to invoke the adapter, a dummy entrypoint file (e.g.,
+   `main.tsx`) must also exist, which can be created with
+   `echo '// not used' > main.tsx`.
+   Note that for Smallweb to invoke the adapter, a dummy entrypoint file (e.g.,
+   `main.tsx`) must also exist. You can create it with a command like
+   `echo '// not used' > main.tsx`.
 
 2. **Execute the original command with the real `deno`**: If the entrypoint is
    not a special JSON configuration file, the adapter assumes it's a standard
