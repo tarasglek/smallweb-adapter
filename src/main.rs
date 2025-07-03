@@ -173,6 +173,10 @@ mod tests {
         std::fs::File::create(&fake_deno_path).unwrap();
 
         let file_path = std::path::Path::new("test/invoke_adapter/main.tsx");
+        let app_dir = file_path.parent().unwrap();
+        let smallweb_json_path = app_dir.join("smallweb.json");
+        let smallweb_json_content = r#"{"exec": "some command with $PORT"}"#;
+        std::fs::write(&smallweb_json_path, smallweb_json_content).unwrap();
         let absolute_path = std::fs::canonicalize(file_path).unwrap();
         let entrypoint = format!("file://{}", absolute_path.to_str().unwrap());
         let json_arg = format!(
@@ -212,6 +216,7 @@ mod tests {
             }
             _ => panic!("Expected Action::Exec, but got {:?}", action),
         }
+        std::fs::remove_file(smallweb_json_path).unwrap();
     }
 
     #[test]
