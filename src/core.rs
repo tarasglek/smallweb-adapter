@@ -3,6 +3,7 @@ use serde::Deserialize;
 use std::env;
 use std::ffi::OsString;
 use std::fs;
+use std::os::unix::fs::MetadataExt;
 use std::path::PathBuf;
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -45,16 +46,18 @@ pub fn decide_action(args: &[String], path_var: &str) -> (Action, PathBuf) {
         if is_shadowing_deno {
             let mut paths: Vec<_> = env::split_paths(path_var).collect();
             let own_parent_dir = own_abs_path.parent();
+            let parent_meta = own_parent_dir.and_then(|p| p.metadata().ok());
+
             paths.retain(|p| {
-                if let Some(parent) = own_parent_dir {
-                    if let Ok(canonical_p) = p.canonicalize() {
-                        if canonical_p == parent {
-                            debug_log!("removing path entry: {:?}", p);
-                            return false; // remove this path
+                if let Some(parent_meta) = &parent_meta {
+                    if let Ok(p_meta) = p.metadata() {
+                        if p_meta.dev() == parent_meta.dev() && p_meta.ino() == parent_meta.ino() {
+                            debug_log!("removing path entry by metadata: {:?}", p);
+                            return false;
                         }
                     }
                 }
-                true // keep this path
+                true
             });
             let new_path = env::join_paths(paths).unwrap();
             debug_log!("new PATH: {:?}", new_path);
