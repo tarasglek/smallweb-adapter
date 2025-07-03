@@ -1,7 +1,5 @@
 use std::os::unix::fs::MetadataExt;
 use std::path::Path;
-use std::os::unix::fs::MetadataExt;
-use std::path::Path;
 use std::process::Command;
 
 pub fn is_port_listening(port: u16) -> bool {
@@ -48,22 +46,6 @@ pub fn deno_sandbox_to_bubblewrap_args(args: &[String], own_path: &Path) -> Vec<
     .into_iter().map(String::from).collect();
 
     bwrap_args.extend(["/bin", "/usr", "/lib"].iter().flat_map(|&path| bind_mount(path, false)));
-
-    let own_parent_dir = own_path.parent();
-    let parent_meta = own_parent_dir.and_then(|p| p.metadata().ok());
-
-    let should_bind = |path_str: &str| {
-        if let Some(parent_meta) = &parent_meta {
-            let path = Path::new(path_str);
-            if let Ok(p_meta) = path.metadata() {
-                if p_meta.dev() == parent_meta.dev() && p_meta.ino() == parent_meta.ino() {
-                    debug_log!("skipping bind mount for own path: {}", path_str);
-                    return false;
-                }
-            }
-        }
-        !path_str.is_empty()
-    };
 
     if args.iter().any(|arg| arg == "--allow-net") {
         bwrap_args.push("--share-net".to_string());
