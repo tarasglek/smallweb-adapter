@@ -1,1 +1,1 @@
-{"exec":"python3 -m http.server $PORT"}
+// this is not used cos of .exec

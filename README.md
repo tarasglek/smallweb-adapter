@@ -78,3 +78,7 @@ logging will be off.
 ```
 cargo test -- --nocapture
 ```
+
+# Related projects & TODOs
+* https://github.com/Zouuup/landrun seems like a successor to bubblewrap using more modern landlock api
+* we should probably do strace -ff like syscall tracing to avoid netstat polling loop
